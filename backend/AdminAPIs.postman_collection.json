@@ -1,0 +1,152 @@
+{
+  "info": {
+    "name": "Admin API Collection",
+    "_postman_id": "c48ad7b6-2d43-45c8-b9e0-1234567890ab",
+    "description": "Postman collection for testing Admin APIs (Mongo + Express + Node backend)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Admin Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"Admin@123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "login"]
+        }
+      }
+    },
+    {
+      "name": "Get All Users",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/users",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "users"]
+        }
+      }
+    },
+    {
+      "name": "Create Store",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test Store\",\n  \"description\": \"This is a sample store\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/stores",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "stores"]
+        }
+      }
+    },
+    {
+      "name": "Get All Stores",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/stores",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "stores"]
+        }
+      }
+    },
+    {
+      "name": "Update Store",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Updated Store Name\",\n  \"description\": \"Updated description\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/stores/{{storeId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "stores", "{{storeId}}"]
+        }
+      }
+    },
+    {
+      "name": "Create Product",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Sample Product\",\n  \"price\": 99,\n  \"store\": \"{{storeId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/products",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "products"]
+        }
+      }
+    },
+    {
+      "name": "Get All Products",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/products",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "products"]
+        }
+      }
+    },
+    {
+      "name": "Update Product",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Updated Product\",\n  \"price\": 120\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/products/{{productId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "products", "{{productId}}"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000" },
+    { "key": "token", "value": "" },
+    { "key": "storeId", "value": "" },
+    { "key": "productId", "value": "" }
+  ]
+}
