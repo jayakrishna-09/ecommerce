@@ -1,13 +1,20 @@
 import mongoose from "mongoose";
 
-const userSchema = mongoose.Schema(
+const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true }, // plain text (not hashed)
-    role: { type: String, enum: ["customer", "vendor", "admin"], default: "customer" },
+    password: { type: String, required: true },
+    role: { 
+      type: String, 
+      enum: ["customer", "vendor", "admin"], 
+      default: "customer" 
+    },
+    store: { type: mongoose.Schema.Types.ObjectId, ref: "Store" }, // linked after approval
+    isBlocked: { type: Boolean, default: false }
   },
   { timestamps: true }
 );
 
-export default mongoose.model("User", userSchema);
+const User = mongoose.model("User", userSchema);
+export default User;
