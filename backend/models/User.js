@@ -11,7 +11,17 @@ const userSchema = new mongoose.Schema(
       default: "customer" 
     },
     store: { type: mongoose.Schema.Types.ObjectId, ref: "Store" }, // linked after approval
-    isBlocked: { type: Boolean, default: false }
+    isBlocked: { type: Boolean, default: false },
+
+     //  Customer-specific fields
+    bookmarks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+    favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+    cart: [
+      {
+        product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+        quantity: { type: Number, default: 1 },
+      },
+    ],
   },
   { timestamps: true }
 );

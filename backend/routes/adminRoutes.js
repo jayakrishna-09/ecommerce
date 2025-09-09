@@ -21,6 +21,7 @@ import {
   // approveVendorRequest,
   // rejectVendorRequest,
 } from "../controllers/adminController.js";
+import { blockVendor, unblockVendor } from "../controllers/adminController.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -60,8 +61,17 @@ router.patch("/products/:id", protect, adminOnly, patchProduct);
 
 //  Vendor store requests
 router.get("/vendor-requests", protect, adminOnly, getPendingVendorRequests);
+router.patch("/vendor-requests/:id/status",protect,adminOnly,updateStoreStatus
+);
 // router.patch("/vendor-requests/:id/approve", protect, adminOnly, approveVendorRequest);
 // router.patch("/vendor-requests/:id/reject", protect, adminOnly, rejectVendorRequest);
 
+
+
+// Block a vendor
+router.patch("/vendors/:id/block", protect, adminOnly, blockVendor);
+
+// Unblock a vendor
+router.patch("/vendors/:id/unblock", protect, adminOnly, unblockVendor);
 
 export default router;

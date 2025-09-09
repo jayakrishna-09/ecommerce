@@ -93,3 +93,67 @@ export const requestStore = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
+
+// for vendor profile
+
+// GET /api/vendors/profile
+export const getVendorProfile = async (req, res) => {
+  try {
+    const vendor = await User.findById(req.user._id).select("-password");
+    if (!vendor) return res.status(404).json({ message: "Vendor not found" });
+
+    // include store info (if any)
+    const store = await Store.findOne({ vendor: vendor._id });
+    res.json({ ...vendor.toObject(), store });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PUT /api/vendors/profile  (full update)
+export const updateVendorProfile = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    const vendor = await User.findById(req.user._id);
+    if (!vendor) return res.status(404).json({ message: "Vendor not found" });
+
+    // Full replace semantics: set to provided values (keep if omitted)
+    if (name !== undefined) vendor.name = name;
+    if (email !== undefined) vendor.email = email;
+    if (password !== undefined) vendor.password = password; // no hashing as per your setup
+
+    await vendor.save();
+
+    const clean = vendor.toObject();
+    delete clean.password;
+    res.json(clean);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PATCH /api/vendors/profile  (partial update)
+export const patchVendorProfile = async (req, res) => {
+  try {
+    const allowed = ["name", "email", "password"]; // fields vendor can change
+    const update = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) update[key] = req.body[key];
+    }
+
+    const vendor = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: update },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!vendor) return res.status(404).json({ message: "Vendor not found" });
+
+    res.json(vendor);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
