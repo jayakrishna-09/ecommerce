@@ -14,12 +14,8 @@ import {
   patchProduct,
   updateProduct,
   getPendingStores,
-  // approveStore,
-  // rejectStore,
   updateStoreStatus,
   getPendingVendorRequests,
-  // approveVendorRequest,
-  // rejectVendorRequest,
 } from "../controllers/adminController.js";
 import { blockVendor, unblockVendor } from "../controllers/adminController.js";
 import { protect, adminOnly } from "../middleware/authMiddleware.js";
@@ -37,19 +33,15 @@ router.patch("/users/:id/unblock", protect, adminOnly, unblockUser);
 // Stores
 router.post("/stores", protect, adminOnly, createStore);
 router.get("/stores", protect, adminOnly, getStores);
+
+// Store requests (move pending routes before :id routes)
+router.get("/stores/pending", protect, adminOnly, getPendingStores);
+router.patch("/stores/:id/status", protect, adminOnly, updateStoreStatus);
+
+// Dynamic :id routes (must come after static routes like /pending)
 router.get("/stores/:id", protect, adminOnly, getStoreById);
 router.put("/stores/:id", protect, adminOnly, updateStore);
 router.patch("/stores/:id", protect, adminOnly, updateStore);
-
-
-// Store requests
-router.get("/stores/pending", protect, adminOnly, getPendingStores);
-// router.patch("/stores/:id/approve", protect, adminOnly, approveStore);
-// router.patch("/stores/:id/reject", protect, adminOnly, rejectStore);
-// write single api for both approve and reject
-router.patch("/stores/:id/status", protect, adminOnly, updateStoreStatus);
-
-
 
 // Products
 router.post("/products", protect, adminOnly, createProduct);
@@ -58,20 +50,12 @@ router.get("/products/:id", protect, adminOnly, getProductById);
 router.put("/products/:id", protect, adminOnly, updateProduct);
 router.patch("/products/:id", protect, adminOnly, patchProduct);
 
-
-//  Vendor store requests
+// Vendor store requests
 router.get("/vendor-requests", protect, adminOnly, getPendingVendorRequests);
-router.patch("/vendor-requests/:id/status",protect,adminOnly,updateStoreStatus
-);
-// router.patch("/vendor-requests/:id/approve", protect, adminOnly, approveVendorRequest);
-// router.patch("/vendor-requests/:id/reject", protect, adminOnly, rejectVendorRequest);
+router.patch("/vendor-requests/:id/status", protect, adminOnly, updateStoreStatus);
 
-
-
-// Block a vendor
+// Block/Unblock vendor
 router.patch("/vendors/:id/block", protect, adminOnly, blockVendor);
-
-// Unblock a vendor
 router.patch("/vendors/:id/unblock", protect, adminOnly, unblockVendor);
 
 export default router;

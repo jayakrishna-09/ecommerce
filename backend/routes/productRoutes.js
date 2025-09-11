@@ -20,8 +20,8 @@ router.post("/", protect, addProduct);
 router.get("/", getAllProducts);
 
 
-// Get all products (public/admin)
-router.get("/", getProducts);
+// Get all products (public/admin)   //
+router.get("/list", getProducts);
 
 // Get product by ID
 router.get("/:id", getProductById);
