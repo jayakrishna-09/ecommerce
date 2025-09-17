@@ -3,16 +3,12 @@ import Store from "../models/Store.js";
 import Product from "../models/Product.js";
 import generateToken from "../utils/generateToken.js";
 
-
 // Admin Login
 export const adminLogin = async (req, res) => {
   const { email, password } = req.body;
-
   const admin = await User.findOne({ email, role: "admin" });
-  if (!admin) return res.status(401).json({ message: "Invalid credentials" });
 
-  // Plain text password check
-  if (password !== admin.password) {
+  if (!admin || password !== admin.password) {
     return res.status(401).json({ message: "Invalid credentials" });
   }
 
@@ -28,18 +24,43 @@ export const adminLogin = async (req, res) => {
 // Get all users
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find(); 
+    const users = await User.find();
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
+// Block / Unblock user
+export const blockUser = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isBlocked: true },
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ message: "User blocked successfully", user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
+export const unblockUser = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isBlocked: false },
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json({ message: "User unblocked successfully", user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-
-
-// Create Store
+// Create / Get / Update stores
 export const createStore = async (req, res) => {
   try {
     const store = await Store.create(req.body);
@@ -49,7 +70,6 @@ export const createStore = async (req, res) => {
   }
 };
 
-// Get all stores
 export const getStores = async (req, res) => {
   try {
     const stores = await Store.find();
@@ -59,7 +79,16 @@ export const getStores = async (req, res) => {
   }
 };
 
-// Update store (PUT / PATCH)
+export const getStoreById = async (req, res) => {
+  try {
+    const store = await Store.findById(req.params.id);
+    if (!store) return res.status(404).json({ message: "Store not found" });
+    res.json(store);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const updateStore = async (req, res) => {
   try {
     const store = await Store.findByIdAndUpdate(
@@ -67,33 +96,12 @@ export const updateStore = async (req, res) => {
       req.body,
       { new: true, runValidators: true }
     );
-
-    if (!store) {
-      return res.status(404).json({ message: "Store not found" });
-    }
-
+    if (!store) return res.status(404).json({ message: "Store not found" });
     res.json(store);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
-
-
-
-// Get store by ID
-export const getStoreById = async (req, res) => {
-  try {
-    const store = await Store.findById(req.params.id);
-    if (!store) {
-      return res.status(404).json({ message: "Store not found" });
-    }
-    res.json(store);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-
 
 // CRUD for products
 export const createProduct = async (req, res) => {
@@ -107,13 +115,10 @@ export const getProducts = async (req, res) => {
   res.json(products);
 };
 
-// Get product by ID
 export const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
+    if (!product) return res.status(404).json({ message: "Product not found" });
     res.json(product);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -127,28 +132,103 @@ export const updateProduct = async (req, res) => {
   product.title = req.body.title || product.title;
   product.price = req.body.price || product.price;
   await product.save();
-
   res.json(product);
 };
 
-
-
-// PATCH product (partial update)
 export const patchProduct = async (req, res) => {
   try {
     const product = await Product.findByIdAndUpdate(
       req.params.id,
-      { $set: req.body },       
+      { $set: req.body },
       { new: true, runValidators: true }
     );
-
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-
+    if (!product) return res.status(404).json({ message: "Product not found" });
     res.json(product);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
+// Get pending stores
+export const getPendingStores = async (req, res) => {
+  try {
+    const stores = await Store.find({ status: "pending" })
+      .populate("vendor", "name email");
+    res.json(stores);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ Single API: approve | reject | pending
+export const updateStoreStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const store = await Store.findById(req.params.id);
+    if (!store) return res.status(404).json({ message: "Store not found" });
+
+    if (!["approved", "rejected", "pending"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
+    store.status = status;
+    await store.save();
+
+    if (status === "approved") {
+      await User.findByIdAndUpdate(store.vendor, { store: store._id });
+    } else {
+      await User.findByIdAndUpdate(store.vendor, { $unset: { store: "" } });
+    }
+
+    res.json({ message: `Store marked as ${status}`, store });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Vendor requests (just pending)
+export const getPendingVendorRequests = async (req, res) => {
+  try {
+    const stores = await Store.find({ status: "pending" })
+      .populate("vendor", "name email");
+    res.json(stores);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
+// admin can block & unblock vendors
+// PATCH /api/admin/vendors/:id/block
+export const blockVendor = async (req, res) => {
+  try {
+    const vendor = await User.findById(req.params.id);
+    if (!vendor || vendor.role !== "vendor") {
+      return res.status(404).json({ message: "Vendor not found" });
+    }
+
+    vendor.blocked = true;
+    await vendor.save();
+
+    res.json({ message: "Vendor blocked successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PATCH /api/admin/vendors/:id/unblock
+export const unblockVendor = async (req, res) => {
+  try {
+    const vendor = await User.findById(req.params.id);
+    if (!vendor || vendor.role !== "vendor") {
+      return res.status(404).json({ message: "Vendor not found" });
+    }
+
+    vendor.blocked = false;
+    await vendor.save();
+
+    res.json({ message: "Vendor unblocked successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
