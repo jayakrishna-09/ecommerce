@@ -12,7 +12,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import styles from '@/styles/LoginPage.module.scss';
 
 interface FormData {
-    role: string |'customer' | 'vendor' | 'admin';
+    role: 'customer' | 'vendor' | 'admin';
     email: string;
     password: string;
 }
@@ -76,10 +76,6 @@ const LoginPage: React.FC = () => {
             console.error('Login error:', err);
             dispatch(setError('Something went wrong. Please try again.'));
         }
-
-
-
-
 
     };
 

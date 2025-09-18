@@ -1,7 +1,7 @@
 import User from "../models/User.js";
 import Store from "../models/Store.js";
 import generateToken from "../utils/generateToken.js";
-
+import bcrypt from 'bcrypt';
 // Vendor Registration
 export const vendorRegister = async (req, res) => {
   try {
@@ -12,10 +12,14 @@ export const vendorRegister = async (req, res) => {
       return res.status(400).json({ message: "Email already registered" });
     }
 
+    const saltRounds = 10; // Typical value
+
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
     const vendor = await User.create({
       name,
       email,
-      password, 
+      password: hashedPassword,
       role: "vendor"
     });
 
@@ -41,13 +45,25 @@ export const vendorLogin = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    if (vendor.password !== password) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
 
     if (vendor.isBlocked) {
       return res.status(403).json({ message: "Your account has been blocked by admin" });
     }
+
+
+    // Check if admin exists
+    if (!vendor) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // Compare input password with hashed password in DB
+    const isMatch = await bcrypt.compare(password, vendor.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+
 
     res.json({
       _id: vendor._id,

@@ -135,7 +135,7 @@ const CustomerDashboard: React.FC = () => {
                 confirmPassword: ""
             }));
 
-            // Clear success message 
+            // Clear success message
             setTimeout(() => {
                 setProfileUpdateSuccess("");
             }, 3000);
@@ -260,6 +260,14 @@ const CustomerDashboard: React.FC = () => {
         }
     };
 
+    //  Calculate total cart price
+    const calculateTotalPrice = (): number => {
+        return cart.reduce((total, item) => {
+            if (typeof item.product === 'string' || !item.product?.price) return total;
+            return total + item.product.price * item.quantity;
+        }, 0);
+    };
+
     // Render different sections
     const renderContent = (): React.ReactNode => {
         if (loading) {
@@ -338,26 +346,35 @@ const CustomerDashboard: React.FC = () => {
                                 <p>Add some products to get started!</p>
                             </div>
                         ) : (
-                            <div className="space-y-4 mt-8">
-                                {cart.map((item, index) => (
-                                    <div key={index} className={styles.cartItem}>
-                                        <div className={styles.itemInfo}>
-                                            <h3>{item.product?.title || 'Product'}</h3>
-                                            <p className={styles.quantity}>Quantity: {item.quantity}</p>
-                                            {item.product?.price && (
-                                                <p className={styles.price}>₹{item.product.price} each</p>
-                                            )}
+                            <>
+                                <div className="space-y-4 mt-8">
+                                    {cart.map((item, index) => (
+                                        <div key={index} className={styles.cartItem}>
+                                            <div className={styles.itemInfo}>
+                                                <h3>{item.product?.title || 'Product'}</h3>
+                                                <p className={styles.quantity}>Quantity: {item.quantity}</p>
+                                                {item.product?.price && (
+                                                    <p className={styles.price}>₹{item.product.price} each</p>
+                                                )}
+                                            </div>
+                                            <Button
+                                                onClick={() => removeFromCart(item.product._id)}
+                                                className={styles.removeBtn}
+                                                size="sm"
+                                            >
+                                                Remove
+                                            </Button>
                                         </div>
-                                        <Button
-                                            onClick={() => removeFromCart(item.product._id)}
-                                            className={styles.removeBtn}
-                                            size="sm"
-                                        >
-                                            Remove
-                                        </Button>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                                {/*  Added total price display */}
+                                <Card className={styles.totalPriceCard}>
+                                    <CardContent className={styles.totalPriceContent}>
+                                        <h3 className={styles.totalPriceLabel}>Total Price:</h3>
+                                        <p className={styles.totalPrice}>₹{calculateTotalPrice().toFixed(2)}</p>
+                                    </CardContent>
+                                </Card>
+                            </>
                         )}
                     </div>
                 );
@@ -683,8 +700,10 @@ const CustomerDashboard: React.FC = () => {
                                 onClick={() => setActiveTab(tab.key as any)}
                                 className={`${styles.navTab} ${activeTab === tab.key ? styles.active : ''}`}
                             >
-                                {getTabIcon(tab.key)}
-                                {tab.label}
+                                <div className={styles.navTabContent}>
+                                    {getTabIcon(tab.key)}
+                                    <span>{tab.label}</span>
+                                </div>
                             </Button>
                         ))}
                     </div>
@@ -704,4 +723,5 @@ const CustomerDashboard: React.FC = () => {
         </div>
     );
 };
+
 export default CustomerDashboard;

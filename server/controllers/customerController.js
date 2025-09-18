@@ -1,5 +1,6 @@
 import User from "../models/User.js";
 import Product from "../models/Product.js";
+import bcrypt from 'bcrypt';
 import generateToken from "../utils/generateToken.js";
 
 
@@ -17,10 +18,14 @@ export const registerCustomer = async (req, res) => {
       return res.status(400).json({ message: "Email already registered" });
     }
 
+const saltRounds = 10; // Typical value
+
+const hashedPassword = await bcrypt.hash(password, saltRounds);
+
     const user = await User.create({
       name,
       email,
-      password, 
+      password:hashedPassword, 
       role: "customer",
     });
 
@@ -47,13 +52,25 @@ export const loginCustomer = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    if (user.isBlocked || user.blocked) {
+    if (user.isBlocked) {
       return res.status(403).json({ message: "Your account has been blocked by admin." });
     }
 
-    if (user.password !== password) {
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
+    // if (user.password !== password) {
+    //   return res.status(401).json({ message: "Invalid credentials" });
+    // }
+    // Check if admin exists
+      if (!user) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+    
+      // Compare input password with hashed password in DB
+      const isMatch = await bcrypt.compare(password, user.password);
+    
+      if (!isMatch) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+    
 
     res.json({
       _id: user._id,

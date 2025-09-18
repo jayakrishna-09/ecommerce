@@ -119,9 +119,9 @@ const authSlice = createSlice({
         state.user = null;
         state.token = null;
       })
-      .addCase(registerUser.rejected, (state, action: PayloadAction<string>) => {
+      .addCase(registerUser.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload;
+        state.error = action.payload!;
       })
       // Login cases
       .addCase(loginUser.pending, (state) => {
@@ -134,9 +134,9 @@ const authSlice = createSlice({
         state.token = action.payload.token;
         state.error = null;
       })
-      .addCase(loginUser.rejected, (state, action: PayloadAction<string>) => {
+      .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
-        state.error = action.payload;
+        state.error = action.payload!;
       });
   },
 });

@@ -160,10 +160,11 @@ const AdminDashboard: React.FC = () => {
   const handleBlockUnblock = async (id: string, action: 'block' | 'unblock'): Promise<void> => {
     try {
       const endpoint = action === 'block' ? 'block' : 'unblock';
-      const response: ApiResponse<{ message: string }> = await API.patch(`/admin/users/${id}/${endpoint}`, {});
+      const response: ApiResponse<{ message: string }> = await API.put(`/admin/users/${id}/${endpoint}`, {});
       await fetchUsers();
       alert(response.data.message);
     } catch (err: any) {
+      console.log(err);
       setError(err.response?.data?.message || `Failed to ${action} user`);
     }
   };
@@ -171,7 +172,7 @@ const AdminDashboard: React.FC = () => {
   const handleVendorBlockUnblock = async (id: string, action: 'block' | 'unblock'): Promise<void> => {
     try {
       const endpoint = action === 'block' ? 'block' : 'unblock';
-      const response: ApiResponse<{ message: string }> = await API.patch(`/admin/vendors/${id}/${endpoint}`, {});
+      const response: ApiResponse<{ message: string }> = await API.put(`/admin/vendors/${id}/${endpoint}`, {});
       await fetchUsers();
       alert(response.data.message);
     } catch (err: any) {
@@ -217,48 +218,50 @@ const AdminDashboard: React.FC = () => {
                 <Loader2 className="animate-spin h-8 w-8 text-blue-500" />
               </div>
             ) : (
-              <Table>
+              <Table className={styles.table}>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                  <TableRow className={styles.tableHeaderRow}>
+                    <TableHead className={styles.tableHead}>Name</TableHead>
+                    <TableHead className={styles.tableHead}>Email</TableHead>
+                    <TableHead className={styles.tableHead}>Role</TableHead>
+                    <TableHead className={styles.tableHead}>Status</TableHead>
+                    <TableHead className={styles.tableHead}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center">
+                      <TableCell colSpan={5} className={styles.emptyCell}>
                         No users found
                       </TableCell>
                     </TableRow>
                   ) : (
                     users.map((user) => (
-                      <TableRow key={user._id}>
-                        <TableCell>{user.name || 'N/A'}</TableCell>
-                        <TableCell>{user.email || 'N/A'}</TableCell>
-                        <TableCell>{user.role || 'N/A'}</TableCell>
-                        <TableCell>{user.isBlocked || user.blocked ? 'Blocked' : 'Active'}</TableCell>
-                        <TableCell>
-                          {user.role === 'vendor' ? (
-                            <Button
-                              onClick={() => handleVendorBlockUnblock(user._id, user.blocked ? 'unblock' : 'block')}
-                              variant={user.blocked ? 'default' : 'destructive'}
-                              size="sm"
-                            >
-                              {user.blocked ? 'Unblock Vendor' : 'Block Vendor'}
-                            </Button>
-                          ) : (
-                            <Button
-                              onClick={() => handleBlockUnblock(user._id, user.isBlocked ? 'unblock' : 'block')}
-                              variant={user.isBlocked ? 'default' : 'destructive'}
-                              size="sm"
-                            >
-                              {user.isBlocked ? 'Unblock' : 'Block'}
-                            </Button>
-                          )}
+                      <TableRow key={user._id} className={styles.tableRow}>
+                        <TableCell className={styles.tableCell}>{user.name || 'N/A'}</TableCell>
+                        <TableCell className={styles.tableCell}>{user.email || 'N/A'}</TableCell>
+                        <TableCell className={styles.tableCell}>{user.role || 'N/A'}</TableCell>
+                        <TableCell className={styles.tableCell}>
+                          <span
+                            className={`${styles.statusBadge} ${user.isBlocked ? styles.blocked : styles.active
+                              }`}
+                          >
+                            {user.isBlocked ? 'Blocked' : 'Active'}
+                          </span>
+                        </TableCell>
+                        <TableCell className={styles.tableCell}>
+                          <Button
+                            onClick={() =>
+                              user.role === 'vendor'
+                                ? handleVendorBlockUnblock(user._id, user.isBlocked ? 'unblock' : 'block')
+                                : handleBlockUnblock(user._id, user.isBlocked ? 'unblock' : 'block')
+                            }
+                            variant={user.isBlocked ? 'default' : 'destructive'}
+                            size="sm"
+                            className={styles.actionButton}
+                          >
+                            {user.isBlocked ? 'Unblock' : 'Block'}
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -299,7 +302,9 @@ const AdminDashboard: React.FC = () => {
                       placeholder="Enter location"
                     />
                   </div>
-                  <Button type="submit">Create Store</Button>
+                  <Button type="submit" className={styles.submitButton}>
+                    Create Store
+                  </Button>
                 </form>
               </CardContent>
             </Card>
@@ -308,29 +313,36 @@ const AdminDashboard: React.FC = () => {
                 <Loader2 className="animate-spin h-8 w-8 text-blue-500" />
               </div>
             ) : (
-              <Table>
+              <Table className={styles.table}>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                  <TableRow className={styles.tableHeaderRow}>
+                    <TableHead className={styles.tableHead}>Name</TableHead>
+                    <TableHead className={styles.tableHead}>Location</TableHead>
+                    <TableHead className={styles.tableHead}>Status</TableHead>
+                    <TableHead className={styles.tableHead}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {stores.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center">
+                      <TableCell colSpan={4} className={styles.emptyCell}>
                         No stores found
                       </TableCell>
                     </TableRow>
                   ) : (
                     stores.map((store) => (
-                      <TableRow key={store._id}>
-                        <TableCell>{store.name || 'N/A'}</TableCell>
-                        <TableCell>{store.location || 'N/A'}</TableCell>
-                        <TableCell>{store.status || 'N/A'}</TableCell>
-                        <TableCell>
+                      <TableRow key={store._id} className={styles.tableRow}>
+                        <TableCell className={styles.tableCell}>{store.name || 'N/A'}</TableCell>
+                        <TableCell className={styles.tableCell}>{store.location || 'N/A'}</TableCell>
+                        <TableCell className={styles.tableCell}>
+                          <span
+                            className={`${styles.statusBadge} ${store.status === 'approved' ? styles.active : styles.pending
+                              }`}
+                          >
+                            {store.status || 'N/A'}
+                          </span>
+                        </TableCell>
+                        <TableCell className={styles.tableCell}>
                           <Button
                             onClick={() => {
                               const updatedName = prompt('Enter new store name:', store.name);
@@ -341,6 +353,7 @@ const AdminDashboard: React.FC = () => {
                             }}
                             variant="outline"
                             size="sm"
+                            className={styles.actionButton}
                           >
                             Edit
                           </Button>
@@ -363,34 +376,39 @@ const AdminDashboard: React.FC = () => {
                 <Loader2 className="animate-spin h-8 w-8 text-blue-500" />
               </div>
             ) : (
-              <Table>
+              <Table className={styles.table}>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Vendor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                  <TableRow className={styles.tableHeaderRow}>
+                    <TableHead className={styles.tableHead}>Name</TableHead>
+                    <TableHead className={styles.tableHead}>Vendor</TableHead>
+                    <TableHead className={styles.tableHead}>Status</TableHead>
+                    <TableHead className={styles.tableHead}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {pendingStores.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center">
+                      <TableCell colSpan={4} className={styles.emptyCell}>
                         No pending stores found
                       </TableCell>
                     </TableRow>
                   ) : (
                     pendingStores.map((store) => (
-                      <TableRow key={store._id}>
-                        <TableCell>{store.name || 'N/A'}</TableCell>
-                        <TableCell>{store.vendor?.name || 'N/A'}</TableCell>
-                        <TableCell>{store.status || 'N/A'}</TableCell>
-                        <TableCell>
+                      <TableRow key={store._id} className={styles.tableRow}>
+                        <TableCell className={styles.tableCell}>{store.name || 'N/A'}</TableCell>
+                        <TableCell className={styles.tableCell}>{store.vendor?.name || 'N/A'}</TableCell>
+                        <TableCell className={styles.tableCell}>
+                          <span className={`${styles.statusBadge} ${styles.pending}`}>
+                            {store.status || 'Pending'}
+                          </span>
+                        </TableCell>
+                        <TableCell className={styles.tableCell}>
                           <div className={styles.actionButtons}>
                             <Button
                               onClick={() => handleUpdateStoreStatus(store._id, 'approved')}
                               variant="default"
                               size="sm"
+                              className={styles.actionButton}
                             >
                               Approve
                             </Button>
@@ -398,6 +416,7 @@ const AdminDashboard: React.FC = () => {
                               onClick={() => handleUpdateStoreStatus(store._id, 'rejected')}
                               variant="destructive"
                               size="sm"
+                              className={styles.actionButton}
                             >
                               Reject
                             </Button>
@@ -460,7 +479,9 @@ const AdminDashboard: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button type="submit">Create Product</Button>
+                  <Button type="submit" className={styles.submitButton}>
+                    Create Product
+                  </Button>
                 </form>
               </CardContent>
             </Card>
@@ -469,29 +490,29 @@ const AdminDashboard: React.FC = () => {
                 <Loader2 className="animate-spin h-8 w-8 text-blue-500" />
               </div>
             ) : (
-              <Table>
+              <Table className={styles.table}>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Store</TableHead>
-                    <TableHead>Actions</TableHead>
+                  <TableRow className={styles.tableHeaderRow}>
+                    <TableHead className={styles.tableHead}>Title</TableHead>
+                    <TableHead className={styles.tableHead}>Price</TableHead>
+                    <TableHead className={styles.tableHead}>Store</TableHead>
+                    <TableHead className={styles.tableHead}>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {products.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center">
+                      <TableCell colSpan={4} className={styles.emptyCell}>
                         No products found
                       </TableCell>
                     </TableRow>
                   ) : (
                     products.map((product) => (
-                      <TableRow key={product._id}>
-                        <TableCell>{product.title || 'N/A'}</TableCell>
-                        <TableCell>{product.price || 'N/A'}</TableCell>
-                        <TableCell>{product.store?.name || 'N/A'}</TableCell>
-                        <TableCell>
+                      <TableRow key={product._id} className={styles.tableRow}>
+                        <TableCell className={styles.tableCell}>{product.title || 'N/A'}</TableCell>
+                        <TableCell className={styles.tableCell}>₹{product.price || 'N/A'}</TableCell>
+                        <TableCell className={styles.tableCell}>{product.store?.name || 'N/A'}</TableCell>
+                        <TableCell className={styles.tableCell}>
                           <Button
                             onClick={() => {
                               const updatedTitle = prompt('Enter new product title:', product.title);
@@ -505,6 +526,7 @@ const AdminDashboard: React.FC = () => {
                             }}
                             variant="outline"
                             size="sm"
+                            className={styles.actionButton}
                           >
                             Edit
                           </Button>
@@ -519,7 +541,7 @@ const AdminDashboard: React.FC = () => {
         );
 
       default:
-        return <p>Select a tab</p>;
+        return <p className={styles.emptyCell}>Select a tab</p>;
     }
   };
 
@@ -578,4 +600,5 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 };
+
 export default AdminDashboard;

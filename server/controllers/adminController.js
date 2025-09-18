@@ -2,14 +2,24 @@ import User from "../models/User.js";
 import Store from "../models/Store.js";
 import Product from "../models/Product.js";
 import generateToken from "../utils/generateToken.js";
+import bcrypt from 'bcrypt';
 
 // Admin Login
 export const adminLogin = async (req, res) => {
   const { email, password } = req.body;
-  const admin = await User.findOne({ email, role: "admin" });
 
-  if (!admin || password !== admin.password) {
+  const admin = await User.findOne({ email, role: "admin" });
+  
+  // Check if admin exists
+  if (!admin) {
     return res.status(401).json({ message: "Invalid credentials" });
+  }
+
+  // Compare input password with hashed password in DB
+  const isMatch = await bcrypt.compare(password, admin.password);
+
+  if (!isMatch) {
+    return res.status(401).json({ message: 'Invalid credentials' });
   }
 
   res.json({
@@ -20,7 +30,6 @@ export const adminLogin = async (req, res) => {
     token: generateToken(admin._id, "admin"),
   });
 };
-
 // Get all users
 export const getAllUsers = async (req, res) => {
   try {
@@ -199,7 +208,7 @@ export const getPendingVendorRequests = async (req, res) => {
 
 
 // admin can block & unblock vendors
-// PATCH /api/admin/vendors/:id/block
+//  /api/admin/vendors/:id/block
 export const blockVendor = async (req, res) => {
   try {
     const vendor = await User.findById(req.params.id);
@@ -207,7 +216,7 @@ export const blockVendor = async (req, res) => {
       return res.status(404).json({ message: "Vendor not found" });
     }
 
-    vendor.blocked = true;
+    vendor.isBlocked = true;
     await vendor.save();
 
     res.json({ message: "Vendor blocked successfully" });
@@ -216,7 +225,7 @@ export const blockVendor = async (req, res) => {
   }
 };
 
-// PATCH /api/admin/vendors/:id/unblock
+//  /api/admin/vendors/:id/unblock
 export const unblockVendor = async (req, res) => {
   try {
     const vendor = await User.findById(req.params.id);
@@ -224,7 +233,7 @@ export const unblockVendor = async (req, res) => {
       return res.status(404).json({ message: "Vendor not found" });
     }
 
-    vendor.blocked = false;
+    vendor.isBlocked = false;
     await vendor.save();
 
     res.json({ message: "Vendor unblocked successfully" });

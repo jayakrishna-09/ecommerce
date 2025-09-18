@@ -27,8 +27,8 @@ router.post("/login", adminLogin);
 
 // Users
 router.get("/users", protect, adminOnly, getAllUsers);
-router.patch("/users/:id/block", protect, adminOnly, blockUser);
-router.patch("/users/:id/unblock", protect, adminOnly, unblockUser);
+router.put("/users/:id/block", protect, adminOnly, blockUser);
+router.put("/users/:id/unblock", protect, adminOnly, unblockUser);
 
 // Stores
 router.post("/stores", protect, adminOnly, createStore);
@@ -55,7 +55,7 @@ router.get("/vendor-requests", protect, adminOnly, getPendingVendorRequests);
 router.patch("/vendor-requests/:id/status", protect, adminOnly, updateStoreStatus);
 
 // Block/Unblock vendor
-router.patch("/vendors/:id/block", protect, adminOnly, blockVendor);
-router.patch("/vendors/:id/unblock", protect, adminOnly, unblockVendor);
+router.put("/vendors/:id/block", protect, adminOnly, blockVendor);
+router.put("/vendors/:id/unblock", protect, adminOnly, unblockVendor);
 
 export default router;
