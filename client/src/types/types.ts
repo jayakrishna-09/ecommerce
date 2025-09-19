@@ -2,7 +2,7 @@ interface Product {
     _id: string;
     title: string;
     price: number;
-    description?: string; 
+    description: string; 
     store?: { _id: string; name: string }; 
 }
 interface CartItem {

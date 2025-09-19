@@ -225,7 +225,9 @@ const VendorDashboard: React.FC = () => {
                                     <div key={label} className={styles.profileItem}>
                                         <Label className={styles.label}>{label}:</Label>
                                         <p className={label === 'Status' ? profile.isBlocked ? styles.statusBlocked : styles.statusActive : ''}>
-                                            {label === 'Status' ? (profile.isBlocked ? 'Blocked' : 'Active') : profile[label.toLowerCase() as keyof Profile]}
+                                            {label === 'Status' ? (profile.isBlocked ? 'Blocked' : 'Active')    : typeof profile[label.toLowerCase() as keyof Profile] === "object"
+                                                ? (profile.store?.name ?? "")
+                                                    : String(profile[label.toLowerCase() as keyof Profile] ?? "")}
                                         </p>
                                     </div>
                                 ))}
