@@ -3,7 +3,7 @@ interface Product {
     title: string;
     price: number;
     description: string; 
-    store?: { _id: string; name: string }; 
+    store?:  { _id: string; name: string }; 
 }
 interface CartItem {
     _id?: string;
@@ -37,7 +37,7 @@ interface EditProfileData {
     confirmPassword: string;
 }
 interface User {
-    _id?: string; 
+    _id: string; 
     name?: string; 
     email?: string; 
     role?: string |'customer' | 'vendor' | 'admin'; 

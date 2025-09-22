@@ -10,11 +10,14 @@ import styles from '@/styles/CustomerDashboard.module.scss';
 import LogoutButton from "@/components/LogoutButton";
 import { Product, CartItem, Favorite, CustomerProfile, EditProfileData, ApiResponse, BookmarkType } from '@/types/types';
 import { RootState } from "@/store/store";
+import { useApiError } from "@/components/ApiErrorBoundary";
 
 const CustomerDashboard: React.FC = () => {
     const { token, user } = useSelector((state: RootState) => state.auth);
 
-    // States
+    const { handleApiCall, retryCritical, setRetryCritical } = useApiError();
+
+
     const [products, setProducts] = useState<Product[]>([]);
     const [cart, setCart] = useState<CartItem[]>([]);
     const [favorites, setFavorites] = useState<Favorite[]>([]);
@@ -22,79 +25,133 @@ const CustomerDashboard: React.FC = () => {
     const [profile, setProfile] = useState<CustomerProfile | null>(null);
     const [activeTab, setActiveTab] = useState<"products" | "cart" | "favorites" | "bookmarks" | "profile">("products");
     const [loading, setLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string>("");
     const [isEditingProfile, setIsEditingProfile] = useState<boolean>(false);
     const [editProfileData, setEditProfileData] = useState<EditProfileData>({
         name: "", email: "", password: "", confirmPassword: ""
     });
     const [profileUpdateLoading, setProfileUpdateLoading] = useState<boolean>(false);
-    const [profileUpdateSuccess, setProfileUpdateSuccess] = useState<string>("");
 
-    // Axios instance
+
     const authAxios = axios.create({
         baseURL: "http://localhost:5000/api",
         headers: { Authorization: `Bearer ${token}` },
     });
 
-    // Refresh customer data
+
     const refreshCustomerData = useCallback(async (): Promise<void> => {
-        if (!token) return;
-        try {
-            const { data }: ApiResponse<CustomerProfile> = await authAxios.get("/customers/profile");
-            setProfile(data);
-            setCart(data.cart || []);
-            setFavorites(data.favorites || []);
-            setBookmarks(data.bookmarks || []);
-            setEditProfileData({ name: data.name || "", email: data.email || "", password: "", confirmPassword: "" });
-        } catch (err: any) {
-            setError("Failed to load customer data");
-            console.error("Error loading customer data:", err);
+        if (!token) {
+            throw new Error("No authentication token available");
         }
+        const { data }: ApiResponse<CustomerProfile> = await authAxios.get("/customers/profile");
+        setProfile(data);
+        setCart(data.cart || []);
+        setFavorites(data.favorites || []);
+        setBookmarks(data.bookmarks || []);
+        setEditProfileData({ name: data.name || "", email: data.email || "", password: "", confirmPassword: "" });
     }, [token]);
 
-    // for handling error and success
-    const handleApiCall = async (apiCall: () => Promise<any>, successMessage?: string) => {
+    // Fetch products
+    const fetchProducts = useCallback(async () => {
+        setLoading(true);
         try {
-            await apiCall();
-            await refreshCustomerData();
-            setError("");
-            if (successMessage) setProfileUpdateSuccess(successMessage);
-        } catch (err: any) {
-            setError(err.response?.data?.message || "Operation failed");
-            console.error("API call failed:", err);
+            const { data }: ApiResponse<{ products: Product[] } | Product[]> = await authAxios.get("/products?page=1&limit=10");
+            setProducts(Array.isArray(data) ? data : data.products || []);
+        } finally {
+            setLoading(false);
         }
-    };
+    }, []);
 
     // Load initial data
     useEffect(() => {
-        const fetchProducts = async () => {
-            try {
-                setLoading(true);
-                const { data }: ApiResponse<{ products: Product[] } | Product[]> = await authAxios.get("/products?page=1&limit=10");
-                setProducts(Array.isArray(data) ? data : data.products || []);
-            } catch (err: any) {
-                setError("Failed to load products");
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchProducts();
-        refreshCustomerData();
-    }, [refreshCustomerData]);
+        handleApiCall(fetchProducts, true); // Critical API call
+        handleApiCall(refreshCustomerData, true);
+    }, [refreshCustomerData, fetchProducts, handleApiCall]);
+
+    //  retry callback for critical errors
+    useEffect(() => {
+        setRetryCritical(() => () => {
+            fetchProducts();
+            refreshCustomerData();
+        });
+    }, [fetchProducts, refreshCustomerData, setRetryCritical]);
 
     // Cart, favorites, bookmarks handlers
-    const addToCart = (productId: string) => handleApiCall(() => authAxios.post(`/customers/cart/${productId}`, { quantity: 1 }));
-    const removeFromCart = (productId: string) => handleApiCall(() => authAxios.delete(`/customers/cart/${productId}`));
-    const addFavorite = (productId: string) => handleApiCall(() => authAxios.post(`/customers/favorites/${productId}`));
-    const removeFavorite = (productId: string) => handleApiCall(() => authAxios.delete(`/customers/favorites/${productId}`));
-    const addBookmark = (productId: string) => handleApiCall(() => authAxios.post(`/customers/bookmarks/${productId}`));
-    const removeBookmark = (productId: string) => handleApiCall(() => authAxios.delete(`/customers/bookmarks/${productId}`));
+    const addToCart = async (productId: string) => {
+        const product = products.find(p => p._id === productId);
+        if (product) {
+            setCart(prev => [...prev, { product, quantity: 1 }]);
+        }
+        await handleApiCall(
+            () => authAxios.post(`/customers/cart/${productId}`, { quantity: 1 }),
+            false
+        );
+        await refreshCustomerData();
+    };
+
+    const removeFromCart = async (productId: string) => {
+        setCart(prev => prev.filter(item =>
+            typeof item.product === 'string' ? item.product !== productId : item.product._id !== productId
+        ));
+        await handleApiCall(
+            () => authAxios.delete(`/customers/cart/${productId}`),
+            false
+        );
+        await refreshCustomerData();
+    };
+
+    const addFavorite = async (productId: string) => {
+        const product = products.find(p => p._id === productId);
+        if (product) {
+            setFavorites(prev => [...prev, product]);
+        }
+        await handleApiCall(
+            () => authAxios.post(`/customers/favorites/${productId}`),
+            false
+        );
+        await refreshCustomerData();
+    };
+
+    const removeFavorite = async (productId: string) => {
+        setFavorites(prev => prev.filter(fav => fav._id !== productId && fav !== productId));
+        await handleApiCall(
+            () => authAxios.delete(`/customers/favorites/${productId}`),
+            false
+        );
+        await refreshCustomerData();
+    };
+
+    const addBookmark = async (productId: string) => {
+        const product = products.find(p => p._id === productId);
+        if (product) {
+            setBookmarks(prev => [...prev, product]);
+        }
+        await handleApiCall(
+            () => authAxios.post(`/customers/bookmarks/${productId}`),
+            false
+        );
+        await refreshCustomerData();
+    };
+
+    const removeBookmark = async (productId: string) => {
+        setBookmarks(prev => prev.filter(bm => bm._id !== productId && bm !== productId));
+        await handleApiCall(
+            () => authAxios.delete(`/customers/bookmarks/${productId}`),
+            false
+        );
+        await refreshCustomerData();
+    };
 
     // Profile handlers
     const handleProfileUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!editProfileData.name.trim() || !editProfileData.email.trim()) return setError("Name and email are required");
-        if (editProfileData.password && editProfileData.password !== editProfileData.confirmPassword) return setError("Passwords do not match");
+        if (!editProfileData.name.trim() || !editProfileData.email.trim()) {
+            handleApiCall(() => Promise.reject(new Error("Name and email are required")), false);
+            return;
+        }
+        if (editProfileData.password && editProfileData.password !== editProfileData.confirmPassword) {
+            handleApiCall(() => Promise.reject(new Error("Passwords do not match")), false);
+            return;
+        }
 
         setProfileUpdateLoading(true);
         const updateData: Partial<EditProfileData> = { name: editProfileData.name, email: editProfileData.email };
@@ -102,13 +159,14 @@ const CustomerDashboard: React.FC = () => {
 
         await handleApiCall(
             () => authAxios.put("/customers/profile", updateData),
+            true,
             "Profile updated successfully!"
         );
 
         setIsEditingProfile(false);
         setEditProfileData(prev => ({ ...prev, password: "", confirmPassword: "" }));
         setProfileUpdateLoading(false);
-        setTimeout(() => setProfileUpdateSuccess(""), 3000);
+        await refreshCustomerData();
     };
 
     const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,8 +177,6 @@ const CustomerDashboard: React.FC = () => {
     const handleCancelEdit = () => {
         setIsEditingProfile(false);
         setEditProfileData({ name: profile?.name || "", email: profile?.email || "", password: "", confirmPassword: "" });
-        setError("");
-        setProfileUpdateSuccess("");
     };
 
     // Utility functions
@@ -141,19 +197,12 @@ const CustomerDashboard: React.FC = () => {
         return Icon ? <Icon className="w-4 h-4 mr-2" /> : null;
     };
 
-    // Render components like cart,fav are empty
+    // Render components
     const EmptyState = ({ icon, title, description }: { icon: string; title: string; description: string }) => (
         <div className={styles.emptyState}>
             <div className={styles.emptyIcon}>{icon}</div>
             <h3>{title}</h3>
             <p>{description}</p>
-        </div>
-    );
-
-    const Alert = ({ type, message, onClose }: { type: 'error' | 'success'; message: string; onClose: () => void }) => (
-        <div className={`${styles.alert} ${styles[type]}`}>
-            {message}
-            <button onClick={onClose} className={styles.closeBtn}>×</button>
         </div>
     );
 
@@ -229,7 +278,7 @@ const CustomerDashboard: React.FC = () => {
                                                 <div className={styles.itemInfo}>
                                                     <h3>{productTitle}</h3>
                                                     <p className={styles.quantity}>Quantity: {item.quantity}</p>
-                                                    {productPrice > 0 && <p className={styles.price}>₹{productPrice}</p>}
+                                                    {productPrice > 0 && <p className={styles.price}>₹{(productPrice * item.quantity).toFixed(2)}</p>}
                                                 </div>
                                                 <Button onClick={() => removeFromCart(productId)} className={styles.removeBtn} size="sm">
                                                     Remove
@@ -312,10 +361,6 @@ const CustomerDashboard: React.FC = () => {
                                 </Button>
                             )}
                         </div>
-
-                        {profileUpdateSuccess && (
-                            <Alert type="success" message={profileUpdateSuccess} onClose={() => setProfileUpdateSuccess("")} />
-                        )}
 
                         {profile || user ? (
                             !isEditingProfile ? (
@@ -409,12 +454,6 @@ const CustomerDashboard: React.FC = () => {
                     <LogoutButton />
                 </div>
             </header>
-
-            {error && (
-                <div className="max-w-7xl mx-auto px-8 py-4">
-                    <Alert type="error" message={error} onClose={() => setError("")} />
-                </div>
-            )}
 
             <nav className={styles.dashboardNav}>
                 <div className={styles.navContainer}>

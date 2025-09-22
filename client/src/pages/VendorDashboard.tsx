@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, memo } from 'react';
 import API from '../api/axios';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,18 @@ import styles from '@/styles/VendorDashboard.module.scss';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 import { Profile, Store, Product } from '@/types/types';
+
+// Memoized FormGroup to prevent re-rendering and maintain input focus
+const FormGroup = memo(({ id, label, name, value, form, type = 'text', required = false, textarea = false, placeholder = '', onChange }: any) => (
+    <div className={styles.formGroup}>
+        <Label htmlFor={id}>{label} {required && <span className={styles.required}>*</span>}</Label>
+        {textarea ? (
+            <Textarea id={id} name={name} value={value} onChange={onChange} rows={4} placeholder={placeholder} required={required} />
+        ) : (
+            <Input id={id} type={type} name={name} value={value} onChange={onChange} placeholder={placeholder} required={required} {...(type === 'number' && { min: '0', step: '0.01' })} />
+        )}
+    </div>
+));
 
 const VendorDashboard: React.FC = () => {
     const { token } = useSelector((state: RootState) => state.auth);
@@ -156,17 +168,6 @@ const VendorDashboard: React.FC = () => {
         </Badge>
     );
 
-    const FormGroup = ({ id, label, name, value, form, type = 'text', required = false, textarea = false, placeholder = '' }: any) => (
-        <div className={styles.formGroup}>
-            <Label htmlFor={id}>{label} {required && <span className={styles.required}>*</span>}</Label>
-            {textarea ? (
-                <Textarea id={id} name={name} value={value} onChange={(e) => handleInput(e, form)} rows={4} placeholder={placeholder} required={required} />
-            ) : (
-                <Input id={id} type={type} name={name} value={value} onChange={(e) => handleInput(e, form)} placeholder={placeholder} required={required} {...(type === 'number' && { min: '0', step: '0.01' })} />
-            )}
-        </div>
-    );
-
     const renderContent = () => {
         if (loading) return <div className={styles.loader}><Loader2 className="animate-spin h-8 w-8 text-blue-500" /></div>;
         switch (activeTab) {
@@ -225,20 +226,20 @@ const VendorDashboard: React.FC = () => {
                                     <div key={label} className={styles.profileItem}>
                                         <Label className={styles.label}>{label}:</Label>
                                         <p className={label === 'Status' ? profile.isBlocked ? styles.statusBlocked : styles.statusActive : ''}>
-                                            {label === 'Status' ? (profile.isBlocked ? 'Blocked' : 'Active')    : typeof profile[label.toLowerCase() as keyof Profile] === "object"
+                                            {label === 'Status' ? (profile.isBlocked ? 'Blocked' : 'Active') : typeof profile[label.toLowerCase() as keyof Profile] === "object"
                                                 ? (profile.store?.name ?? "")
-                                                    : String(profile[label.toLowerCase() as keyof Profile] ?? "")}
+                                                : String(profile[label.toLowerCase() as keyof Profile] ?? "")}
                                         </p>
                                     </div>
                                 ))}
                             </div>
                         ) : profile ? (
                             <form onSubmit={(e) => handleSubmit(e, 'profile')} className={styles.form}>
-                                <FormGroup id="name" label="Name" name="name" value={profileData.name} form="profileData" required />
-                                <FormGroup id="email" label="Email" name="email" value={profileData.email} form="profileData" type="email" required />
-                                <FormGroup id="password" label="New Password" name="password" value={profileData.password} form="profileData" type="password" />
+                                <FormGroup id="name" label="Name" name="name" value={profileData.name} form="profileData" onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInput(e, 'profileData')} required />
+                                <FormGroup id="email" label="Email" name="email" value={profileData.email} form="profileData" type="email" onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInput(e, 'profileData')} required />
+                                <FormGroup id="password" label="New Password" name="password" value={profileData.password} form="profileData" type="password" onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInput(e, 'profileData')} />
                                 {profileData.password && (
-                                    <FormGroup id="confirmPassword" label="Confirm Password" name="confirmPassword" value={profileData.confirmPassword} form="profileData" type="password" required />
+                                    <FormGroup id="confirmPassword" label="Confirm Password" name="confirmPassword" value={profileData.confirmPassword} form="profileData" type="password" onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInput(e, 'profileData')} required />
                                 )}
                                 <div className={styles.formActions}>
                                     <Button type="submit" disabled={profileLoading}>{profileLoading ? <><Loader2 className="animate-spin h-5 w-5 mr-2" />Updating...</> : 'Save'}</Button>
@@ -295,10 +296,10 @@ const VendorDashboard: React.FC = () => {
                                         <form onSubmit={(e) => handleSubmit(e, 'store')} className={styles.form}>
                                             <div className={styles.grid}>
                                                 {['name', 'location', 'gstNumber', 'contactNumber', 'contactEmail'].map(field => (
-                                                    <FormGroup key={field} id={field} label={field.charAt(0).toUpperCase() + field.slice(1).replace('Number', ' Number').replace('Email', ' Email')} name={field} value={storeData[field as keyof typeof storeData]} form="storeData" type={field.includes('Email') ? 'email' : field.includes('Number') ? 'tel' : 'text'} required />
+                                                    <FormGroup key={field} id={field} label={field.charAt(0).toUpperCase() + field.slice(1).replace('Number', ' Number').replace('Email', ' Email')} name={field} value={storeData[field as keyof typeof storeData]} form="storeData" type={field.includes('Email') ? 'email' : field.includes('Number') ? 'tel' : 'text'} required onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInput(e, 'storeData')} />
                                                 ))}
                                             </div>
-                                            <FormGroup id="description" label="Description" name="description" value={storeData.description} form="storeData" textarea required placeholder="Describe your store" />
+                                            <FormGroup id="description" label="Description" name="description" value={storeData.description} form="storeData" textarea required placeholder="Describe your store" onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInput(e, 'storeData')} />
                                             <div className={styles.formActions}>
                                                 <Button type="submit" disabled={storeLoading}>{storeLoading ? <><Loader2 className="animate-spin h-5 w-5 mr-2" />Submitting...</> : 'Submit'}</Button>
                                                 <Button type="button" variant="secondary" onClick={() => handleCancel('store')} disabled={storeLoading}>Cancel</Button>
@@ -353,9 +354,9 @@ const VendorDashboard: React.FC = () => {
                                 <CardHeader><CardTitle className={styles.cardTitle}>{isEditingProduct ? 'Edit Product' : 'Add Product'}</CardTitle></CardHeader>
                                 <CardContent>
                                     <form onSubmit={(e) => handleSubmit(e, 'product')} className={styles.form}>
-                                        <FormGroup id="title" label="Product Title" name="title" value={productData.title} form="productData" required placeholder="Enter product title" />
-                                        <FormGroup id="price" label="Price" name="price" value={productData.price} form="productData" type="number" required placeholder="Enter product price" />
-                                        <FormGroup id="description" label="Description" name="description" value={productData.description} form="productData" textarea required placeholder="Describe your product" />
+                                        <FormGroup id="title" label="Product Title" name="title" value={productData.title} form="productData" required placeholder="Enter product title" onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInput(e, 'productData')} />
+                                        <FormGroup id="price" label="Price" name="price" value={productData.price} form="productData" type="number" required placeholder="Enter product price" onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInput(e, 'productData')} />
+                                        <FormGroup id="description" label="Description" name="description" value={productData.description} form="productData" textarea required placeholder="Describe your product" onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInput(e, 'productData')} />
                                         <div className={styles.formActions}>
                                             <Button type="submit" disabled={productLoading}>{productLoading ? <><Loader2 className="animate-spin h-5 w-5 mr-2" />Saving...</> : isEditingProduct ? 'Save' : 'Add'}</Button>
                                             <Button type="button" variant="secondary" onClick={() => handleCancel('product')} disabled={productLoading}>Cancel</Button>

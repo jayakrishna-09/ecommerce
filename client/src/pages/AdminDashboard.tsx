@@ -6,23 +6,23 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2 } from 'lucide-react';
 import LogoutButton from '@/components/LogoutButton';
 import styles from '@/styles/AdminDashboard.module.scss';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 import { User, Store, Product, PendingStore, NewStore, NewProduct, LoadingState, ApiResponse } from '@/types/types';
+import { useApiError } from '@/components/ApiErrorBoundary';
 
 const AdminDashboard: React.FC = () => {
   const { user } = useSelector((state: RootState) => state.auth);
+  const { handleApiCall, setRetryCritical } = useApiError();
   const [users, setUsers] = useState<User[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [pendingStores, setPendingStores] = useState<PendingStore[]>([]);
   const [newStore, setNewStore] = useState<NewStore>({ name: '', location: '' });
   const [newProduct, setNewProduct] = useState<NewProduct>({ title: '', price: '', store: '' });
-  const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<LoadingState>({
     users: false,
     stores: false,
@@ -33,179 +33,176 @@ const AdminDashboard: React.FC = () => {
 
   const fetchUsers = async (): Promise<void> => {
     setLoading((prev) => ({ ...prev, users: true }));
-    try {
-      const response: ApiResponse<User[]> = await API.get('/admin/users');
-      if (Array.isArray(response.data)) {
-        setUsers(response.data);
-      } else {
-        console.error('Expected an array for users, got:', response.data);
-        setError('Invalid user data format');
-        setUsers([]);
-      }
-    } catch (err: any) {
-      console.error('Error fetching users:', err);
-      setError(err.response?.data?.message || 'Failed to fetch users');
-      setUsers([]);
-    } finally {
-      setLoading((prev) => ({ ...prev, users: false }));
+    const response: ApiResponse<User[]> = await API.get('/admin/users');
+    if (Array.isArray(response.data)) {
+      setUsers(response.data);
+    } else {
+      throw new Error('Invalid user data format');
     }
   };
 
   const fetchStores = async (): Promise<void> => {
     setLoading((prev) => ({ ...prev, stores: true }));
-    try {
-      const response: ApiResponse<Store[]> = await API.get('/admin/stores');
-      if (Array.isArray(response.data)) {
-        setStores(response.data);
-      } else {
-        console.error('Expected an array for stores, got:', response.data);
-        setError('Invalid store data format');
-        setStores([]);
-      }
-    } catch (err: any) {
-      console.error('Error fetching stores:', err);
-      setError(err.response?.data?.message || 'Failed to fetch stores');
-      setStores([]);
-    } finally {
-      setLoading((prev) => ({ ...prev, stores: false }));
+    const response: ApiResponse<Store[]> = await API.get('/admin/stores');
+    if (Array.isArray(response.data)) {
+      setStores(response.data);
+    } else {
+      throw new Error('Invalid store data format');
     }
   };
 
   const fetchProducts = async (): Promise<void> => {
     setLoading((prev) => ({ ...prev, products: true }));
-    try {
-      const response: ApiResponse<Product[]> = await API.get('/admin/products');
-      if (Array.isArray(response.data)) {
-        setProducts(response.data);
-      } else {
-        console.error('Expected an array for products, got:', response.data);
-        setError('Invalid product data format');
-        setProducts([]);
-      }
-    } catch (err: any) {
-      console.error('Error fetching products:', err);
-      setError(err.response?.data?.message || 'Failed to fetch products');
-      setProducts([]);
-    } finally {
-      setLoading((prev) => ({ ...prev, products: false }));
+    const response: ApiResponse<Product[]> = await API.get('/admin/products');
+    if (Array.isArray(response.data)) {
+      setProducts(response.data);
+    } else {
+      throw new Error('Invalid product data format');
     }
   };
 
   const fetchPendingStores = async (): Promise<void> => {
     setLoading((prev) => ({ ...prev, pendingStores: true }));
-    try {
-      const response: ApiResponse<PendingStore[]> = await API.get('/admin/stores/pending');
-      if (Array.isArray(response.data)) {
-        setPendingStores(response.data);
-      } else {
-        console.error('Expected an array for pending stores, got:', response.data);
-        setError('Invalid pending stores data format');
-        setPendingStores([]);
-      }
-    } catch (err: any) {
-      console.error('Error fetching pending stores:', err);
-      setError(err.response?.data?.message || 'Failed to fetch pending stores');
-      setPendingStores([]);
-    } finally {
-      setLoading((prev) => ({ ...prev, pendingStores: false }));
+    const response: ApiResponse<PendingStore[]> = await API.get('/admin/stores/pending');
+    if (Array.isArray(response.data)) {
+      setPendingStores(response.data);
+    } else {
+      throw new Error('Invalid pending stores data format');
     }
   };
+
+  const fetchData = async () => {
+    await Promise.all([
+      handleApiCall(fetchUsers, true),
+      handleApiCall(fetchStores, true),
+      handleApiCall(fetchProducts, true),
+      handleApiCall(fetchPendingStores, true),
+    ]).finally(() => {
+      setLoading((prev) => ({
+        ...prev,
+        users: false,
+        stores: false,
+        products: false,
+        pendingStores: false,
+      }));
+    });
+  };
+
+  useEffect(() => {
+    fetchData();
+    setRetryCritical(() => fetchData); // Set retry logic for critical errors
+  }, [setRetryCritical]);
 
   const handleCreateStore = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     if (!newStore.name.trim() || !newStore.location.trim()) {
-      setError('Store name and location are required');
+      handleApiCall(() => Promise.reject(new Error('Store name and location are required')), false);
       return;
     }
-    try {
-      const response: ApiResponse<Store> = await API.post('/admin/stores', newStore);
-      setStores([...stores, response.data]);
-      setNewStore({ name: '', location: '' });
-      setError('');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create store');
-    }
+    await handleApiCall(
+      () => API.post('/admin/stores', newStore),
+      true,
+      'Store created successfully'
+    );
+    setStores([...stores, (await API.get('/admin/stores')).data.find((s: Store) => s.name === newStore.name && s.location === newStore.location) || newStore]);
+    setNewStore({ name: '', location: '' });
   };
 
   const handleCreateProduct = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     if (!newProduct.title.trim() || !newProduct.price || !newProduct.store) {
-      setError('Product title, price, and store are required');
+      handleApiCall(() => Promise.reject(new Error('Product title, price, and store are required')), false);
       return;
     }
-    try {
-      const response: ApiResponse<Product> = await API.post('/admin/products', {
+    await handleApiCall(
+      () => API.post('/admin/products', {
         ...newProduct,
         price: parseFloat(newProduct.price),
-      });
-      setProducts([...products, response.data]);
-      setNewProduct({ title: '', price: '', store: '' });
-      setError('');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create product');
-    }
+      }),
+      true,
+      'Product created successfully'
+    );
+    setProducts([...products, (await API.get('/admin/products')).data.find((p: Product) => p.title === newProduct.title && p.store === newProduct.store) || { ...newProduct, price: parseFloat(newProduct.price) }]);
+    setNewProduct({ title: '', price: '', store: '' });
   };
 
   const handleUpdateStoreStatus = async (id: string, status: 'approved' | 'rejected'): Promise<void> => {
-    try {
-      const response: ApiResponse<{ message: string }> = await API.patch(`/admin/stores/${id}/status`, { status });
-      setPendingStores(pendingStores.filter((store) => store._id !== id));
-      await fetchStores();
-      alert(response.data.message);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update store status');
-    }
+    await handleApiCall(
+      () => API.patch(`/admin/stores/${id}/status`, { status }),
+      true,
+      `Store ${status} successfully`
+    );
+    setPendingStores(pendingStores.filter((store) => store._id !== id));
+    await handleApiCall(fetchStores, true);
   };
 
   const handleBlockUnblock = async (id: string, action: 'block' | 'unblock'): Promise<void> => {
+    // Optimistic update: Update UI immediately
+    const previousUsers = [...users];
+    setUsers((prev) =>
+      prev.map((user) =>
+        user._id === id ? { ...user, isBlocked: action === 'block' } : user
+      )
+    );
+
+    const endpoint = action === 'block' ? 'block' : 'unblock';
     try {
-      const endpoint = action === 'block' ? 'block' : 'unblock';
-      const response: ApiResponse<{ message: string }> = await API.put(`/admin/users/${id}/${endpoint}`, {});
-      await fetchUsers();
-      alert(response.data.message);
-    } catch (err: any) {
-      console.log(err);
-      setError(err.response?.data?.message || `Failed to ${action} user`);
+      await handleApiCall(
+        () => API.put(`/admin/users/${id}/${endpoint}`, {}),
+        false,
+        `User ${action}ed successfully`
+      );
+      // Sync with backend
+      await handleApiCall(fetchUsers, true);
+    } catch (error) {
+      // Revert optimistic update on failure
+      setUsers(previousUsers);
+      throw error; // Let handleApiCall handle the error
     }
   };
 
   const handleVendorBlockUnblock = async (id: string, action: 'block' | 'unblock'): Promise<void> => {
+    // Optimistic update: Update UI immediately
+    const previousUsers = [...users];
+    setUsers((prev) =>
+      prev.map((user) =>
+        user._id === id ? { ...user, isBlocked: action === 'block' } : user
+      )
+    );
+
+    const endpoint = action === 'block' ? 'block' : 'unblock';
     try {
-      const endpoint = action === 'block' ? 'block' : 'unblock';
-      const response: ApiResponse<{ message: string }> = await API.put(`/admin/vendors/${id}/${endpoint}`, {});
-      await fetchUsers();
-      alert(response.data.message);
-    } catch (err: any) {
-      setError(err.response?.data?.message || `Failed to ${action} vendor`);
+      await handleApiCall(
+        () => API.put(`/admin/vendors/${id}/${endpoint}`, {}),
+        false,
+        `Vendor ${action}ed successfully`
+      );
+      // Sync with backend
+      await handleApiCall(fetchUsers, true);
+    } catch (error) {
+      // Revert optimistic update on failure
+      setUsers(previousUsers);
+      throw error; // Let handleApiCall handle the error
     }
   };
 
   const handleUpdateStore = async (id: string, updatedStore: Partial<Store>): Promise<void> => {
-    try {
-      const response: ApiResponse<Store> = await API.put(`/admin/stores/${id}`, updatedStore);
-      setStores(stores.map((store) => (store._id === id ? response.data : store)));
-      alert('Store updated successfully');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update store');
-    }
+    await handleApiCall(
+      () => API.put(`/admin/stores/${id}`, updatedStore),
+      true,
+      'Store updated successfully'
+    );
+    setStores(stores.map((store) => (store._id === id ? { ...store, ...updatedStore } : store)));
   };
 
   const handleUpdateProduct = async (id: string, updatedProduct: Partial<Product>): Promise<void> => {
-    try {
-      const response: ApiResponse<Product> = await API.put(`/admin/products/${id}`, updatedProduct);
-      setProducts(products.map((product) => (product._id === id ? response.data : product)));
-      alert('Product updated successfully');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update product');
-    }
+    await handleApiCall(
+      () => API.put(`/admin/products/${id}`, updatedProduct),
+      true,
+      'Product updated successfully'
+    );
+    setProducts(products.map((product) => (product._id === id ? { ...product, ...updatedProduct } : product)));
   };
-
-  useEffect(() => {
-    fetchUsers();
-    fetchStores();
-    fetchProducts();
-    fetchPendingStores();
-  }, []);
 
   const renderContent = (): React.ReactNode => {
     switch (activeTab) {
@@ -243,8 +240,7 @@ const AdminDashboard: React.FC = () => {
                         <TableCell className={styles.tableCell}>{user.role || 'N/A'}</TableCell>
                         <TableCell className={styles.tableCell}>
                           <span
-                            className={`${styles.statusBadge} ${user.isBlocked ? styles.blocked : styles.active
-                              }`}
+                            className={`${styles.statusBadge} ${user.isBlocked ? styles.blocked : styles.active}`}
                           >
                             {user.isBlocked ? 'Blocked' : 'Active'}
                           </span>
@@ -336,8 +332,7 @@ const AdminDashboard: React.FC = () => {
                         <TableCell className={styles.tableCell}>{store.location || 'N/A'}</TableCell>
                         <TableCell className={styles.tableCell}>
                           <span
-                            className={`${styles.statusBadge} ${store.status === 'approved' ? styles.active : styles.pending
-                              }`}
+                            className={`${styles.statusBadge} ${store.status === 'approved' ? styles.active : styles.pending}`}
                           >
                             {store.status || 'N/A'}
                           </span>
@@ -556,16 +551,6 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
       </header>
-
-      {error && (
-        <Alert variant="destructive" className={styles.alert}>
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-          <button onClick={() => setError('')} className={styles.alertClose}>
-            ×
-          </button>
-        </Alert>
-      )}
 
       <div className={styles.content}>
         <nav className={styles.nav}>

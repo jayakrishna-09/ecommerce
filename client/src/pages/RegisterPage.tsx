@@ -37,7 +37,7 @@ const RegisterPage: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value as FormData[typeof name] }));
+    setFormData((prev) => ({ ...prev, [name as keyof FormData]: value, }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,21 +54,21 @@ const RegisterPage: React.FC = () => {
       dispatch(setError('Passwords do not match'));
       return;
     }
-try {
-  const result = await dispatch(registerUser({
-    role,
-    credentials: { name, email, password }
-  }));
+    try {
+      const result = await dispatch(registerUser({
+        role,
+        credentials: { name, email, password }
+      }));
 
-  console.log(result);  // The result of the fulfilled/rejected action
+      console.log(result);
 
-  if (registerUser.fulfilled.match(result)) {
-    navigate('/login', { replace: true });
-  } else {
-    // Handle error if registration failed
-    console.error('Registration failed:', result.payload);
-  }
-}  catch (err) {
+      if (registerUser.fulfilled.match(result)) {
+        navigate('/login', { replace: true });
+      } else {
+
+        console.error('Registration failed:', result.payload);
+      }
+    } catch (err) {
       console.error('Registration error:', err);
       dispatch(setError('Something went wrong. Please try again.'));
     }
