@@ -122,7 +122,7 @@ const AdminDashboard: React.FC = () => {
       true,
       'Product created successfully'
     );
-    setProducts([...products, (await API.get('/admin/products')).data.find((p: Product) => p.title === newProduct.title && p.store === newProduct.store) || { ...newProduct, price: parseFloat(newProduct.price) }]);
+    setProducts([...products, (await API.get('/admin/products')).data.find((p: Product) => p.title === newProduct.title && p.store?.name === newProduct.store) || { ...newProduct, price: parseFloat(newProduct.price) }]);
     setNewProduct({ title: '', price: '', store: '' });
   };
 

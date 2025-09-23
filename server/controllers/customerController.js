@@ -18,7 +18,7 @@ export const registerCustomer = async (req, res) => {
       return res.status(400).json({ message: "Email already registered" });
     }
 
-const saltRounds = 10; // Typical value
+const saltRounds = 10; 
 
 const hashedPassword = await bcrypt.hash(password, saltRounds);
 

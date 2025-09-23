@@ -14,6 +14,54 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
 import { Profile, Store, Product } from '@/types/types';
 
+// Define state type explicitly
+interface State {
+  profile: Profile | null;
+  store: Store | null;
+  products: Product[];
+  activeTab: 'overview' | 'profile' | 'store' | 'products';
+  loading: boolean;
+  error: string;
+  success: string;
+  isEditingProfile: boolean;
+  profileData: {
+    name: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+  };
+  showStoreForm: boolean;
+  storeData: {
+    name: string;
+    description: string;
+    location: string;
+    gstNumber: string;
+    contactEmail: string;
+    contactNumber: string;
+  };
+  showProductForm: boolean;
+  isEditingProduct: boolean;
+  productData: {
+    id: string;
+    title: string;
+    price: string;
+    description: string;
+  };
+  profileLoading: boolean;
+  storeLoading: boolean;
+  productLoading: boolean;
+}
+
+// Define types for form data
+type FormData = {
+  profileData: State['profileData'];
+  storeData: State['storeData'];
+  productData: State['productData'];
+};
+
+// Define type for loading fields
+type LoadingField = 'profileLoading' | 'storeLoading' | 'productLoading';
+
 // Memoized FormGroup to prevent re-rendering and maintain input focus
 const FormGroup = memo(({ id, label, name, value, form, type = 'text', required = false, textarea = false, placeholder = '', onChange }: any) => (
     <div className={styles.formGroup}>
@@ -28,11 +76,11 @@ const FormGroup = memo(({ id, label, name, value, form, type = 'text', required 
 
 const VendorDashboard: React.FC = () => {
     const { token } = useSelector((state: RootState) => state.auth);
-    const [state, setState] = useState({
-        profile: null as Profile | null,
-        store: null as Store | null,
-        products: [] as Product[],
-        activeTab: 'overview' as 'overview' | 'profile' | 'store' | 'products',
+    const [state, setState] = useState<State>({
+        profile: null,
+        store: null,
+        products: [],
+        activeTab: 'overview',
         loading: false,
         error: '',
         success: '',
@@ -50,8 +98,9 @@ const VendorDashboard: React.FC = () => {
 
     const { profile, store, products, activeTab, loading, error, success, isEditingProfile, profileData, showStoreForm, storeData, showProductForm, isEditingProduct, productData, profileLoading, storeLoading, productLoading } = state;
 
-    const setStateField = useCallback((field: string, value: any) => setState(prev => ({ ...prev, [field]: value })), []);
-    const setFormData = useCallback((form: string, data: any) => setState(prev => ({ ...prev, [form]: { ...prev[form], ...data } })), []);
+    const setStateField = useCallback((field: keyof State, value: any) => setState(prev => ({ ...prev, [field]: value })), []);
+    const setFormData = useCallback(<K extends keyof FormData>(form: K, data: Partial<FormData[K]>) => 
+        setState(prev => ({ ...prev, [form]: { ...prev[form], ...data } })), []);
 
     const clearMessages = useCallback(() => setTimeout(() => setState(prev => ({ ...prev, error: '', success: '' })), 5000), []);
 
@@ -95,7 +144,12 @@ const VendorDashboard: React.FC = () => {
 
     const handleSubmit = useCallback(async (e: React.FormEvent, type: 'profile' | 'store' | 'product') => {
         e.preventDefault();
-        const setLoading = { profile: 'profileLoading', store: 'storeLoading', product: 'productLoading' }[type];
+        const loadingMap: Record<'profile' | 'store' | 'product', LoadingField> = {
+            profile: 'profileLoading',
+            store: 'storeLoading',
+            product: 'productLoading'
+        };
+        const setLoading: LoadingField = loadingMap[type];
         setStateField(setLoading, true);
         setStateField('error', '');
         try {

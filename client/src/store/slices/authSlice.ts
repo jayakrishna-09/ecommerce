@@ -55,8 +55,8 @@ export const registerUser = createAsyncThunk<
 );
 
 export const loginUser = createAsyncThunk<
-  { user: User; token: string },
-  { role: keyof typeof roleApiMap; email: string; password: string },
+{ user: User; token: string },
+{ role: string; email: string; password: string },
   { rejectValue: string }
 >(
   'auth/login',

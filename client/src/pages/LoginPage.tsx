@@ -11,14 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useDispatch, useSelector } from 'react-redux';
 import styles from '@/styles/LoginPage.module.scss';
 
-interface FormData {
+export interface FormData {
     role: 'customer' | 'vendor' | 'admin';
     email: string;
     password: string;
 }
 
 const LoginPage: React.FC = () => {
-    const dispatch: AppDispatch = useDispatch();
+const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
     const { isLoading, error, user } = useSelector((state: RootState) => state.auth);
 
@@ -71,7 +71,7 @@ const LoginPage: React.FC = () => {
         }
 
         try {
-            await dispatch(loginUser({ role, email, password }));
+            dispatch(loginUser({ role, email, password }));
         } catch (err) {
             console.error('Login error:', err);
             dispatch(setError('Something went wrong. Please try again.'));
