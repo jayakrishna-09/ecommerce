@@ -109,7 +109,6 @@ const RegisterPage: React.FC = () => {
                 >
                   <option value="customer">Customer</option>
                   <option value="vendor">Vendor</option>
-                  {/* <option value="admin">Admin</option> */}
                 </select>
               </div>
               <div className={styles.formGroup}>

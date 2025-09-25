@@ -128,7 +128,8 @@ const AdminDashboard: React.FC = () => {
 
   const handleUpdateStoreStatus = async (id: string, status: 'approved' | 'rejected'): Promise<void> => {
     await handleApiCall(
-      () => API.patch(`/admin/stores/${id}/status`, { status }),
+      // () => API.patch(`/admin/stores/${id}/status`, { status }),
+      () => API.put(`/admin/stores/${id}/status`, { status }),
       true,
       `Store ${status} successfully`
     );

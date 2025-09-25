@@ -9,7 +9,7 @@ interface ApiErrorContextType {
     setSuccessMessage: (message: string) => void;
     clearError: (index: number) => void;
     clearSuccessMessage: () => void;
-    handleApiCall: (apiCall: () => Promise<any>, isCritical?: boolean, successMessage?: string) => Promise<void>;
+    handleApiCall: (apiCall: () => Promise<any>, isCritical?: boolean, successMessage?: string) => Promise<any>;
     retryCritical: () => void;
     setRetryCritical: React.Dispatch<React.SetStateAction<() => void>>;
 }

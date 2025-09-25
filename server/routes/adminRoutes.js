@@ -36,7 +36,7 @@ router.get("/stores", protect, adminOnly, getStores);
 
 // Store requests (move pending routes before :id routes)
 router.get("/stores/pending", protect, adminOnly, getPendingStores);
-router.patch("/stores/:id/status", protect, adminOnly, updateStoreStatus);
+router.put("/stores/:id/status", protect, adminOnly, updateStoreStatus);
 
 // Dynamic :id routes (must come after static routes like /pending)
 router.get("/stores/:id", protect, adminOnly, getStoreById);

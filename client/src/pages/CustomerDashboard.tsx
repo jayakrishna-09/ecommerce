@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ShoppingCart, Heart, Bookmark, User, Package, Loader2 } from 'lucide-react';
+import { ShoppingCart, Heart, Bookmark, User, Package } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import styles from '@/styles/CustomerDashboard.module.scss';
 import LogoutButton from "@/components/LogoutButton";
 import { Product, CartItem, Favorite, CustomerProfile, EditProfileData, ApiResponse, BookmarkType } from '@/types/types';
@@ -14,9 +15,7 @@ import { useApiError } from "@/components/ApiErrorBoundary";
 
 const CustomerDashboard: React.FC = () => {
     const { token, user } = useSelector((state: RootState) => state.auth);
-
     const { handleApiCall, retryCritical, setRetryCritical } = useApiError();
-
 
     const [products, setProducts] = useState<Product[]>([]);
     const [cart, setCart] = useState<CartItem[]>([]);
@@ -31,72 +30,85 @@ const CustomerDashboard: React.FC = () => {
     });
     const [profileUpdateLoading, setProfileUpdateLoading] = useState<boolean>(false);
 
-
     const authAxios = axios.create({
         baseURL: "http://localhost:5000/api",
         headers: { Authorization: `Bearer ${token}` },
     });
 
+    const fetchProducts = useCallback(async () => {
+        try {
+            const { data }: ApiResponse<{ products: Product[] } | Product[]> = await authAxios.get("/products?page=1&limit=10");
+            return Array.isArray(data) ? data : data.products || [];
+        } catch (error) {
+            throw error;
+        }
+    }, []);
 
-    const refreshCustomerData = useCallback(async (): Promise<void> => {
+    const refreshCustomerData = useCallback(async (availableProducts?: Product[]): Promise<void> => {
         if (!token) {
             throw new Error("No authentication token available");
         }
         const { data }: ApiResponse<CustomerProfile> = await authAxios.get("/customers/profile");
         setProfile(data);
-        setCart(data.cart || []);
+
+        // Fetch products if not provided
+        const productsToUse = availableProducts?.length ? availableProducts : await fetchProducts();
+        setProducts(productsToUse);
+
+        // Filter cart to include only valid products
+        setCart((data.cart || []).filter(
+            (item: CartItem) =>
+                typeof item.product !== "string" &&
+                item.product &&
+                productsToUse.some(p => p._id === item.product._id)
+        ));
         setFavorites(data.favorites || []);
         setBookmarks(data.bookmarks || []);
         setEditProfileData({ name: data.name || "", email: data.email || "", password: "", confirmPassword: "" });
-    }, [token]);
+    }, [token, fetchProducts]);
 
-    // Fetch products
-    const fetchProducts = useCallback(async () => {
-        setLoading(true);
-        try {
-            const { data }: ApiResponse<{ products: Product[] } | Product[]> = await authAxios.get("/products?page=1&limit=10");
-            setProducts(Array.isArray(data) ? data : data.products || []);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    // Load initial data
+    // Load initial data sequentially
     useEffect(() => {
-        handleApiCall(fetchProducts, true); // Critical API call
-        handleApiCall(refreshCustomerData, true);
-    }, [refreshCustomerData, fetchProducts, handleApiCall]);
+        const loadData = async () => {
+            setLoading(true);
+            try {
+                const fetchedProducts = await handleApiCall(fetchProducts, true);
+                await handleApiCall(() => refreshCustomerData(fetchedProducts), true);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadData();
+    }, [fetchProducts, refreshCustomerData, handleApiCall]);
 
-    //  retry callback for critical errors
+    // Retry callback for critical errors
     useEffect(() => {
-        setRetryCritical(() => () => {
-            fetchProducts();
-            refreshCustomerData();
+        setRetryCritical(() => async () => {
+            setLoading(true);
+            try {
+                const fetchedProducts = await fetchProducts();
+                await refreshCustomerData(fetchedProducts);
+            } finally {
+                setLoading(false);
+            }
         });
     }, [fetchProducts, refreshCustomerData, setRetryCritical]);
 
     // Cart, favorites, bookmarks handlers
     const addToCart = async (productId: string) => {
-        const product = products.find(p => p._id === productId);
-        if (product) {
-            setCart(prev => [...prev, { product, quantity: 1 }]);
-        }
         await handleApiCall(
             () => authAxios.post(`/customers/cart/${productId}`, { quantity: 1 }),
             false
         );
-        await refreshCustomerData();
+        await handleApiCall(() => refreshCustomerData(products), false);
     };
 
     const removeFromCart = async (productId: string) => {
-        setCart(prev => prev.filter(item =>
-            typeof item.product === 'string' ? item.product !== productId : item.product._id !== productId
-        ));
         await handleApiCall(
             () => authAxios.delete(`/customers/cart/${productId}`),
             false
         );
-        await refreshCustomerData();
+        await handleApiCall(() => refreshCustomerData(products), false);
     };
 
     const addFavorite = async (productId: string) => {
@@ -108,7 +120,7 @@ const CustomerDashboard: React.FC = () => {
             () => authAxios.post(`/customers/favorites/${productId}`),
             false
         );
-        await refreshCustomerData();
+        await handleApiCall(() => refreshCustomerData(products), false);
     };
 
     const removeFavorite = async (productId: string) => {
@@ -117,7 +129,7 @@ const CustomerDashboard: React.FC = () => {
             () => authAxios.delete(`/customers/favorites/${productId}`),
             false
         );
-        await refreshCustomerData();
+        await handleApiCall(() => refreshCustomerData(products), false);
     };
 
     const addBookmark = async (productId: string) => {
@@ -129,7 +141,7 @@ const CustomerDashboard: React.FC = () => {
             () => authAxios.post(`/customers/bookmarks/${productId}`),
             false
         );
-        await refreshCustomerData();
+        await handleApiCall(() => refreshCustomerData(products), false);
     };
 
     const removeBookmark = async (productId: string) => {
@@ -138,7 +150,7 @@ const CustomerDashboard: React.FC = () => {
             () => authAxios.delete(`/customers/bookmarks/${productId}`),
             false
         );
-        await refreshCustomerData();
+        await handleApiCall(() => refreshCustomerData(products), false);
     };
 
     // Profile handlers
@@ -166,7 +178,7 @@ const CustomerDashboard: React.FC = () => {
         setIsEditingProfile(false);
         setEditProfileData(prev => ({ ...prev, password: "", confirmPassword: "" }));
         setProfileUpdateLoading(false);
-        await refreshCustomerData();
+        await handleApiCall(() => refreshCustomerData(products), false);
     };
 
     const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -180,9 +192,14 @@ const CustomerDashboard: React.FC = () => {
     };
 
     // Utility functions
-    const isInCart = (productId: string) => cart.some(item =>
-        typeof item.product === 'string' ? item.product === productId : item.product._id === productId
-    );
+    const isInCart = (productId: string) =>
+        cart.some(item => {
+            if (!item.product) return false;
+            return typeof item.product === 'string'
+                ? item.product === productId
+                : item.product._id === productId;
+        });
+
     const isInFavorites = (productId: string) => favorites.some(fav => fav === productId || fav._id === productId);
     const isInBookmarks = (productId: string) => bookmarks.some(bm => bm === productId || bm._id === productId);
 
@@ -238,8 +255,19 @@ const CustomerDashboard: React.FC = () => {
     const renderContent = () => {
         if (loading) return (
             <div className={styles.loadingState}>
-                <Loader2 className={`${styles.loadingSpinner} w-8 h-8`} />
-                <span>Loading...</span>
+                <Skeleton className="h-8 w-48 mb-4" />
+                <div className="space-y-4">
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className={styles.cartItem}>
+                            <div className={styles.itemInfo}>
+                                <Skeleton className="h-6 w-64 mb-2" />
+                                <Skeleton className="h-4 w-32 mb-1" />
+                                <Skeleton className="h-4 w-24" />
+                            </div>
+                            <Skeleton className="h-10 w-20" />
+                        </div>
+                    ))}
+                </div>
             </div>
         );
 
@@ -361,7 +389,6 @@ const CustomerDashboard: React.FC = () => {
                                 </Button>
                             )}
                         </div>
-
                         {profile || user ? (
                             !isEditingProfile ? (
                                 <div className={styles.profileGrid}>
@@ -418,7 +445,7 @@ const CustomerDashboard: React.FC = () => {
                                         <Button type="submit" disabled={profileUpdateLoading} className={styles.submitBtn}>
                                             {profileUpdateLoading ? (
                                                 <>
-                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                    <Skeleton className="w-4 h-4 mr-2" />
                                                     Updating...
                                                 </>
                                             ) : 'Save Changes'}
@@ -431,8 +458,19 @@ const CustomerDashboard: React.FC = () => {
                             )
                         ) : (
                             <div className={styles.loadingState}>
-                                <Loader2 className={`${styles.loadingSpinner} w-6 h-6`} />
-                                <span>Loading profile...</span>
+                                <Skeleton className="h-8 w-48 mb-4" />
+                                <div className={styles.profileGrid}>
+                                    {Array.from({ length: 4 }).map((_, i) => (
+                                        <Card key={i} className={styles.profileCard}>
+                                            <CardHeader className={styles.cardHeader}>
+                                                <Skeleton className="h-6 w-32" />
+                                            </CardHeader>
+                                            <CardContent className={styles.cardContent}>
+                                                <Skeleton className="h-4 w-64" />
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
                             </div>
                         )}
                     </div>

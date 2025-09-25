@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useDispatch, useSelector } from 'react-redux';
 import styles from '@/styles/LoginPage.module.scss';
 
-export interface FormData {
+export interface FormData {                 
     role: 'customer' | 'vendor' | 'admin';
     email: string;
     password: string;
@@ -76,7 +76,6 @@ const dispatch = useDispatch<AppDispatch>();
             console.error('Login error:', err);
             dispatch(setError('Something went wrong. Please try again.'));
         }
-
     };
 
     return (

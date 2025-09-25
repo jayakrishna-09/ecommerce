@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import LogoutButton from '@/components/LogoutButton';
 import styles from '@/styles/VendorDashboard.module.scss';
 import { useSelector } from 'react-redux';
@@ -16,47 +16,47 @@ import { Profile, Store, Product } from '@/types/types';
 
 // Define state type explicitly
 interface State {
-  profile: Profile | null;
-  store: Store | null;
-  products: Product[];
-  activeTab: 'overview' | 'profile' | 'store' | 'products';
-  loading: boolean;
-  error: string;
-  success: string;
-  isEditingProfile: boolean;
-  profileData: {
-    name: string;
-    email: string;
-    password: string;
-    confirmPassword: string;
-  };
-  showStoreForm: boolean;
-  storeData: {
-    name: string;
-    description: string;
-    location: string;
-    gstNumber: string;
-    contactEmail: string;
-    contactNumber: string;
-  };
-  showProductForm: boolean;
-  isEditingProduct: boolean;
-  productData: {
-    id: string;
-    title: string;
-    price: string;
-    description: string;
-  };
-  profileLoading: boolean;
-  storeLoading: boolean;
-  productLoading: boolean;
+    profile: Profile | null;
+    store: Store | null;
+    products: Product[];
+    activeTab: 'overview' | 'profile' | 'store' | 'products';
+    loading: boolean;
+    error: string;
+    success: string;
+    isEditingProfile: boolean;
+    profileData: {
+        name: string;
+        email: string;
+        password: string;
+        confirmPassword: string;
+    };
+    showStoreForm: boolean;
+    storeData: {
+        name: string;
+        description: string;
+        location: string;
+        gstNumber: string;
+        contactEmail: string;
+        contactNumber: string;
+    };
+    showProductForm: boolean;
+    isEditingProduct: boolean;
+    productData: {
+        id: string;
+        title: string;
+        price: string;
+        description: string;
+    };
+    profileLoading: boolean;
+    storeLoading: boolean;
+    productLoading: boolean;
 }
 
 // Define types for form data
 type FormData = {
-  profileData: State['profileData'];
-  storeData: State['storeData'];
-  productData: State['productData'];
+    profileData: State['profileData'];
+    storeData: State['storeData'];
+    productData: State['productData'];
 };
 
 // Define type for loading fields
@@ -99,55 +99,75 @@ const VendorDashboard: React.FC = () => {
     const { profile, store, products, activeTab, loading, error, success, isEditingProfile, profileData, showStoreForm, storeData, showProductForm, isEditingProduct, productData, profileLoading, storeLoading, productLoading } = state;
 
     const setStateField = useCallback((field: keyof State, value: any) => setState(prev => ({ ...prev, [field]: value })), []);
-    const setFormData = useCallback(<K extends keyof FormData>(form: K, data: Partial<FormData[K]>) => 
+    const setFormData = useCallback(<K extends keyof FormData>(form: K, data: Partial<FormData[K]>) =>
         setState(prev => ({ ...prev, [form]: { ...prev[form], ...data } })), []);
 
     const clearMessages = useCallback(() => setTimeout(() => setState(prev => ({ ...prev, error: '', success: '' })), 5000), []);
 
-    useEffect(() => {
+    const fetchProducts = useCallback(async () => {
+        console.log('Fetching products...');
+        try {
+            const { data }: { data: { products: Product[] } | Product[] } = await API.get('/products?page=1&limit=5'); // Increased limit
+            const productArray = Array.isArray(data) ? data : data.products || [];
+            console.log('Fetched products:', productArray);
+            return productArray;
+        } catch (error) {
+            console.error('Error fetching products:', error);
+            throw error;
+        }
+    }, []);
+
+    const refreshVendorData = useCallback(async () => {
         if (!token) {
             setStateField('error', 'No token. Please log in.');
             clearMessages();
             return;
         }
-        const fetchData = async () => {
-            setStateField('loading', true);
-            try {
-                const { data: profileData } = await API.get('/vendors/profile');
-                setState(prev => ({
-                    ...prev,
-                    profile: profileData,
-                    store: profileData.store || null,
-                    profileData: { name: profileData.name || '', email: profileData.email || '', password: '', confirmPassword: '' },
-                    storeData: { ...prev.storeData, contactEmail: profileData.email || '' },
-                }));
-                const { data: { products: productArray } } = await API.get('/products?page=1&limit=5');
-                if (!Array.isArray(productArray)) throw new Error('Invalid products data');
-                const filteredProducts = profileData.store?._id ? productArray.filter(p => p.store?._id?.toString() === profileData.store._id.toString()) : [];
-                setStateField('products', filteredProducts);
-                if (!profileData.store?._id) {
-                    setStateField('error', 'No store found. Set up a store.');
-                    clearMessages();
-                } else if (!filteredProducts.length) {
-                    setStateField('error', 'No products found. Add a product.');
-                    clearMessages();
-                }
-            } catch (err: any) {
-                setStateField('error', err.response?.data?.message || 'Failed to load data');
+        setStateField('loading', true);
+        try {
+            const { data: profileData } = await API.get('/vendors/profile');
+            console.log('Profile data:', profileData);
+            const products = await fetchProducts();
+            const filteredProducts = profileData.store?._id
+                ? products.filter(p => {
+                    const storeId = typeof p.store === 'string' ? p.store : p.store?._id;
+                    return storeId?.toString() === profileData.store._id.toString();
+                })
+                : [];
+            console.log('Filtered products:', filteredProducts);
+            setState(prev => ({
+                ...prev,
+                profile: profileData,
+                store: profileData.store || null,
+                products: filteredProducts,
+                profileData: { name: profileData.name || '', email: profileData.email || '', password: '', confirmPassword: '' },
+                storeData: { ...prev.storeData, contactEmail: profileData.email || '' },
+            }));
+            if (!profileData.store?._id) {
+                setStateField('error', 'No store found. Set up a store.');
                 clearMessages();
-            } finally {
-                setStateField('loading', false);
+            } else if (!filteredProducts.length) {
+                setStateField('error', 'No products found. Add a product.');
+                clearMessages();
             }
-        };
-        fetchData();
-    }, [token, setStateField, clearMessages]);
+        } catch (err: any) {
+            setStateField('error', err.response?.data?.message || 'Failed to load data');
+            clearMessages();
+        } finally {
+            setStateField('loading', false);
+        }
+    }, [token, fetchProducts, setStateField, clearMessages]);
+
+    useEffect(() => {
+        refreshVendorData();
+    }, [refreshVendorData]);
 
     const handleSubmit = useCallback(async (e: React.FormEvent, type: 'profile' | 'store' | 'product') => {
         e.preventDefault();
         const loadingMap: Record<'profile' | 'store' | 'product', LoadingField> = {
             profile: 'profileLoading',
             store: 'storeLoading',
-            product: 'productLoading'
+            product: 'productLoading',
         };
         const setLoading: LoadingField = loadingMap[type];
         setStateField(setLoading, true);
@@ -171,12 +191,12 @@ const VendorDashboard: React.FC = () => {
                 const { data } = await API[isEditingProduct ? 'put' : 'post'](`/products${isEditingProduct ? `/${productData.id}` : ''}`, productPayload);
                 setState(prev => ({
                     ...prev,
-                    products: isEditingProduct ? prev.products.map(p => p._id === productData.id ? data : p) : [...prev.products, data],
                     showProductForm: false,
                     isEditingProduct: false,
                     productData: { id: '', title: '', price: '', description: '' },
                     success: `Product ${isEditingProduct ? 'updated' : 'added'}!`,
                 }));
+                await refreshVendorData(); 
             }
             clearMessages();
         } catch (err: any) {
@@ -185,7 +205,7 @@ const VendorDashboard: React.FC = () => {
         } finally {
             setStateField(setLoading, false);
         }
-    }, [profileData, storeData, productData, isEditingProduct, setStateField, clearMessages]);
+    }, [profileData, storeData, productData, isEditingProduct, setStateField, clearMessages, refreshVendorData]);
 
     const handleInput = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, form: 'profileData' | 'storeData' | 'productData') => {
         setFormData(form, { [e.target.name]: e.target.value });
@@ -205,8 +225,8 @@ const VendorDashboard: React.FC = () => {
         setStateField('productLoading', true);
         try {
             await API.delete(`/products/${productId}`);
-            setStateField('products', products.filter(p => p._id !== productId));
             setStateField('success', 'Product deleted!');
+            await refreshVendorData(); 
             clearMessages();
         } catch (err: any) {
             setStateField('error', err.response?.data?.message || 'Failed to delete product');
@@ -214,7 +234,7 @@ const VendorDashboard: React.FC = () => {
         } finally {
             setStateField('productLoading', false);
         }
-    }, [products, setStateField, clearMessages]);
+    }, [setStateField, clearMessages, refreshVendorData]);
 
     const getStoreBadge = (status: string) => (
         <Badge className={`${styles.badge} ${status === 'pending' ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200' : status === 'approved' ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-red-100 text-red-800 hover:bg-red-200'}`}>
@@ -223,7 +243,24 @@ const VendorDashboard: React.FC = () => {
     );
 
     const renderContent = () => {
-        if (loading) return <div className={styles.loader}><Loader2 className="animate-spin h-8 w-8 text-blue-500" /></div>;
+        if (loading) return (
+            <div className={styles.loadingState}>
+                <Skeleton className="h-8 w-48 mb-4" />
+                <div className={styles.grid}>
+                    {Array.from({ length: 2 }).map((_, i) => (
+                        <Card key={i} className={styles.card}>
+                            <CardHeader>
+                                <Skeleton className="h-6 w-32" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-4 w-64 mb-2" />
+                                <Skeleton className="h-4 w-48" />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </div>
+        );
         switch (activeTab) {
             case 'overview':
                 return (
@@ -280,9 +317,7 @@ const VendorDashboard: React.FC = () => {
                                     <div key={label} className={styles.profileItem}>
                                         <Label className={styles.label}>{label}:</Label>
                                         <p className={label === 'Status' ? profile.isBlocked ? styles.statusBlocked : styles.statusActive : ''}>
-                                            {label === 'Status' ? (profile.isBlocked ? 'Blocked' : 'Active') : typeof profile[label.toLowerCase() as keyof Profile] === "object"
-                                                ? (profile.store?.name ?? "")
-                                                : String(profile[label.toLowerCase() as keyof Profile] ?? "")}
+                                            {label === 'Status' ? (profile.isBlocked ? 'Blocked' : 'Active') : String(profile[label.toLowerCase() as keyof Profile] ?? '')}
                                         </p>
                                     </div>
                                 ))}
@@ -296,11 +331,29 @@ const VendorDashboard: React.FC = () => {
                                     <FormGroup id="confirmPassword" label="Confirm Password" name="confirmPassword" value={profileData.confirmPassword} form="profileData" type="password" onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInput(e, 'profileData')} required />
                                 )}
                                 <div className={styles.formActions}>
-                                    <Button type="submit" disabled={profileLoading}>{profileLoading ? <><Loader2 className="animate-spin h-5 w-5 mr-2" />Updating...</> : 'Save'}</Button>
+                                    <Button type="submit" disabled={profileLoading}>
+                                        {profileLoading ? <><Skeleton className="h-5 w-5 mr-2" />Updating...</> : 'Save'}
+                                    </Button>
                                     <Button type="button" variant="secondary" onClick={() => handleCancel('profile')} disabled={profileLoading}>Cancel</Button>
                                 </div>
                             </form>
-                        ) : <div className={styles.loader}><Loader2 className="animate-spin h-8 w-8 text-blue-500" /></div>}
+                        ) : (
+                            <div className={styles.loadingState}>
+                                <Skeleton className="h-8 w-48 mb-4" />
+                                <div className={styles.profileGrid}>
+                                    {Array.from({ length: 4 }).map((_, i) => (
+                                        <Card key={i} className={styles.profileItem}>
+                                            <CardHeader>
+                                                <Skeleton className="h-6 w-32" />
+                                            </CardHeader>
+                                            <CardContent>
+                                                <Skeleton className="h-4 w-64" />
+                                            </CardContent>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 );
             case 'store':
@@ -355,7 +408,9 @@ const VendorDashboard: React.FC = () => {
                                             </div>
                                             <FormGroup id="description" label="Description" name="description" value={storeData.description} form="storeData" textarea required placeholder="Describe your store" onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInput(e, 'storeData')} />
                                             <div className={styles.formActions}>
-                                                <Button type="submit" disabled={storeLoading}>{storeLoading ? <><Loader2 className="animate-spin h-5 w-5 mr-2" />Submitting...</> : 'Submit'}</Button>
+                                                <Button type="submit" disabled={storeLoading}>
+                                                    {storeLoading ? <><Skeleton className="h-5 w-5 mr-2" />Submitting...</> : 'Submit'}
+                                                </Button>
                                                 <Button type="button" variant="secondary" onClick={() => handleCancel('store')} disabled={storeLoading}>Cancel</Button>
                                             </div>
                                         </form>
@@ -382,7 +437,12 @@ const VendorDashboard: React.FC = () => {
                             <Card className={styles.card}>
                                 <CardHeader><CardTitle className={styles.cardTitle}>Your Products <Button onClick={() => setStateField('showProductForm', true)}>Add Product</Button></CardTitle></CardHeader>
                                 <CardContent>
-                                    {products.length === 0 ? <p>No products found.</p> : (
+                                    {products.length === 0 ? (
+                                        <div className={styles.noProducts}>
+                                            <span className={styles.iconLarge}>🛍️</span>
+                                            <p>No products found.</p>
+                                        </div>
+                                    ) : (
                                         <div className={styles.productList}>
                                             {products.map(p => (
                                                 <Card key={p._id} className={styles.productItem}>
@@ -412,7 +472,9 @@ const VendorDashboard: React.FC = () => {
                                         <FormGroup id="price" label="Price" name="price" value={productData.price} form="productData" type="number" required placeholder="Enter product price" onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleInput(e, 'productData')} />
                                         <FormGroup id="description" label="Description" name="description" value={productData.description} form="productData" textarea required placeholder="Describe your product" onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleInput(e, 'productData')} />
                                         <div className={styles.formActions}>
-                                            <Button type="submit" disabled={productLoading}>{productLoading ? <><Loader2 className="animate-spin h-5 w-5 mr-2" />Saving...</> : isEditingProduct ? 'Save' : 'Add'}</Button>
+                                            <Button type="submit" disabled={productLoading}>
+                                                {productLoading ? <><Skeleton className="h-5 w-5 mr-2" />Saving...</> : isEditingProduct ? 'Save' : 'Add'}
+                                            </Button>
                                             <Button type="button" variant="secondary" onClick={() => handleCancel('product')} disabled={productLoading}>Cancel</Button>
                                         </div>
                                     </form>

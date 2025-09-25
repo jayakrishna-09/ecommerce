@@ -32,30 +32,31 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/vendors", vendorRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/customers", customerRoutes);
-//  const saltRounds = 10;
+
+const saltRounds = 10;
 // async function hashExistingPasswords() {
 //     try {
       
 //         const users = await User.find();
 //         for (const user of users) {
-//             if (user.password && user.password.length < 60) {  // If not already hashed
+//             if (user.password && user.password.length < 60) {  
 //                 const hashed = await bcrypt.hash(user.password, saltRounds);
 //                 user.password = hashed;
 //                 await user.save();
 //                 console.log(`Hashed password for user: ${user._id}`);
 //             }
 //         }
-//         console.log('All existing passwords have been hashed.');
+//         // console.log('All existing passwords have been hashed.');
 //         process.exit(0);
 //     } catch (error) {
 //         console.error('Error hashing passwords:', error);
 //         process.exit(1);
 //     }
 // }
-
 // hashExistingPasswords();
 
 // Basic error handling middleware
+
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({ message: 'Something went wrong!' });
