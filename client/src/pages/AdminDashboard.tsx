@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import LogoutButton from '@/components/LogoutButton';
 import styles from '@/styles/AdminDashboard.module.scss';
 import { useSelector } from 'react-redux';
@@ -128,7 +128,6 @@ const AdminDashboard: React.FC = () => {
 
   const handleUpdateStoreStatus = async (id: string, status: 'approved' | 'rejected'): Promise<void> => {
     await handleApiCall(
-      // () => API.patch(`/admin/stores/${id}/status`, { status }),
       () => API.put(`/admin/stores/${id}/status`, { status }),
       true,
       `Store ${status} successfully`
@@ -138,7 +137,6 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleBlockUnblock = async (id: string, action: 'block' | 'unblock'): Promise<void> => {
-    // Optimistic update: Update UI immediately
     const previousUsers = [...users];
     setUsers((prev) =>
       prev.map((user) =>
@@ -153,17 +151,14 @@ const AdminDashboard: React.FC = () => {
         false,
         `User ${action}ed successfully`
       );
-      // Sync with backend
       await handleApiCall(fetchUsers, true);
     } catch (error) {
-      // Revert optimistic update on failure
       setUsers(previousUsers);
-      throw error; // Let handleApiCall handle the error
+      throw error;
     }
   };
 
   const handleVendorBlockUnblock = async (id: string, action: 'block' | 'unblock'): Promise<void> => {
-    // Optimistic update: Update UI immediately
     const previousUsers = [...users];
     setUsers((prev) =>
       prev.map((user) =>
@@ -178,12 +173,10 @@ const AdminDashboard: React.FC = () => {
         false,
         `Vendor ${action}ed successfully`
       );
-      // Sync with backend
       await handleApiCall(fetchUsers, true);
     } catch (error) {
-      // Revert optimistic update on failure
       setUsers(previousUsers);
-      throw error; // Let handleApiCall handle the error
+      throw error;
     }
   };
 
@@ -212,8 +205,30 @@ const AdminDashboard: React.FC = () => {
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>Users</h2>
             {loading.users ? (
-              <div className={styles.loader}>
-                <Loader2 className="animate-spin h-8 w-8 text-blue-500" />
+              <div className={styles.loadingState}>
+                <Skeleton className="h-8 w-48 mb-4" />
+                <Table className={styles.table}>
+                  <TableHeader>
+                    <TableRow className={styles.tableHeaderRow}>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-24" /></TableHead>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-32" /></TableHead>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-20" /></TableHead>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-20" /></TableHead>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-24" /></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <TableRow key={i} className={styles.tableRow}>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-48" /></TableCell>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-24" /></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             ) : (
               <Table className={styles.table}>
@@ -306,8 +321,28 @@ const AdminDashboard: React.FC = () => {
               </CardContent>
             </Card>
             {loading.stores ? (
-              <div className={styles.loader}>
-                <Loader2 className="animate-spin h-8 w-8 text-blue-500" />
+              <div className={styles.loadingState}>
+                <Skeleton className="h-8 w-48 mb-4" />
+                <Table className={styles.table}>
+                  <TableHeader>
+                    <TableRow className={styles.tableHeaderRow}>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-24" /></TableHead>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-32" /></TableHead>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-20" /></TableHead>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-24" /></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <TableRow key={i} className={styles.tableRow}>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-48" /></TableCell>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-24" /></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             ) : (
               <Table className={styles.table}>
@@ -368,8 +403,28 @@ const AdminDashboard: React.FC = () => {
           <div className={styles.section}>
             <h2 className={styles.sectionTitle}>Pending Store Requests</h2>
             {loading.pendingStores ? (
-              <div className={styles.loader}>
-                <Loader2 className="animate-spin h-8 w-8 text-blue-500" />
+              <div className={styles.loadingState}>
+                <Skeleton className="h-8 w-48 mb-4" />
+                <Table className={styles.table}>
+                  <TableHeader>
+                    <TableRow className={styles.tableHeaderRow}>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-24" /></TableHead>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-32" /></TableHead>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-20" /></TableHead>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-24" /></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <TableRow key={i} className={styles.tableRow}>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-48" /></TableCell>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-24" /></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             ) : (
               <Table className={styles.table}>
@@ -457,6 +512,10 @@ const AdminDashboard: React.FC = () => {
                       placeholder="Enter price"
                     />
                   </div>
+
+
+
+                  {/* for the below component we need styling */}
                   <div className={styles.formGroup}>
                     <Label htmlFor="productStore">Store</Label>
                     <Select
@@ -482,8 +541,28 @@ const AdminDashboard: React.FC = () => {
               </CardContent>
             </Card>
             {loading.products ? (
-              <div className={styles.loader}>
-                <Loader2 className="animate-spin h-8 w-8 text-blue-500" />
+              <div className={styles.loadingState}>
+                <Skeleton className="h-8 w-48 mb-4" />
+                <Table className={styles.table}>
+                  <TableHeader>
+                    <TableRow className={styles.tableHeaderRow}>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-24" /></TableHead>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-20" /></TableHead>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-24" /></TableHead>
+                      <TableHead className={styles.tableHead}><Skeleton className="h-6 w-24" /></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <TableRow key={i} className={styles.tableRow}>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell className={styles.tableCell}><Skeleton className="h-4 w-24" /></TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             ) : (
               <Table className={styles.table}>

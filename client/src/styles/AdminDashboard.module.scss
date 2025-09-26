@@ -1,9 +1,10 @@
-// Global reset and base styles
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
-// Design  variables
+
 :root {
   --primary-color: #3b82f6;
   --primary-hover: #2563eb;
@@ -38,7 +39,7 @@
   }
 }
 
-// Header
+
 .header {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
@@ -93,7 +94,7 @@
   }
 }
 
-// Alert system
+
 .alert {
   position: relative;
   margin: 1rem auto;
@@ -103,8 +104,15 @@
   animation: slideIn 0.3s ease-out;
 
   @keyframes slideIn {
-    from { transform: translateY(-10px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+      transform: translateY(-10px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 
   .alertClose {
@@ -262,7 +270,7 @@
     padding: 1.5rem 1rem;
   }
 
-  > * + * {
+  >*+* {
     margin-top: 1.5rem;
   }
 
@@ -341,7 +349,7 @@
     color: #ffffff;
     border: none;
     border-radius: var(--border-radius);
-    padding: 0.5rem 1rem;
+    // padding: 0.5rem 1rem;
     cursor: pointer;
     transition: var(--transition);
     font-weight: 600;
@@ -401,7 +409,8 @@
       color: #ffffff;
     }
 
-    &.blocked, &.rejected {
+    &.blocked,
+    &.rejected {
       background: var(--error-color);
       color: #ffffff;
     }
@@ -413,7 +422,7 @@
   }
 }
 
-// Table styling
+
 .table {
   width: 100%;
   margin: 1.5rem 0;
@@ -532,7 +541,6 @@
   }
 }
 
-// Accessibility improvements
 button:focus-visible,
 .navTab:focus-visible,
 .actionButton:focus-visible {
@@ -540,7 +548,6 @@ button:focus-visible,
   outline-offset: 2px;
 }
 
-// Loading states
 .loader {
   .animate-spin {
     animation: spin 1s linear infinite;
@@ -548,6 +555,11 @@ button:focus-visible,
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
