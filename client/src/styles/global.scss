@@ -1,0 +1,36 @@
+// src/styles/global.scss
+// Shared SCSS variables and mixins for the app (replace Tailwind equivalents)
+
+:root {
+  // Colors (matching your original Tailwind: bg-gray-50, text-blue-600, etc.)
+  --bg-light: #f9fafb;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --border-gray: #d1d5db;
+  --primary-blue: #2563eb;
+  --primary-hover: #1d4ed8;
+  --error-bg: #fee2e2;
+  --error-border: #f87171;
+  --error-text: #b91c1c;
+  --white: #ffffff;
+}
+
+// Mixins (optional, for reusable styles)
+@mixin button-primary {
+  background-color: var(--primary-blue);
+  color: var(--white);
+  &:hover {
+    background-color: var(--primary-hover);
+  }
+}
+
+// Global resets (optional)
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--bg-light);
+}
